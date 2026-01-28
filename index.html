@@ -1,0 +1,926 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestão de Parcelamentos - Contec</title>
+    <link rel="shortcut icon" href="logo.png" type="image/png">
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    
+    <style>
+        /* ================= ESTILO VISUAL CONTEC ================= */
+        :root {
+            --contec-blue: #0d47a1; 
+            --contec-hover: #063175;
+            --whatsapp-green: #25D366;
+            --whatsapp-hover: #128C7E;
+        }
+
+        body { 
+            background-color: #f4f6f9; 
+            font-family: 'Roboto', sans-serif;
+        }
+
+        /* CABEÇALHO */
+        .header-contec {
+            background-color: var(--contec-blue);
+            color: white;
+            padding: 15px 0;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+
+        .link-voltar {
+            color: rgba(255,255,255,0.8);
+            text-decoration: none;
+            font-size: 0.95rem;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+        .link-voltar:hover { color: white; transform: translateX(-3px); display: inline-block; }
+
+        .logo-contec {
+            max-height: 90px;
+            width: auto;
+            display: block;
+            margin: 0 auto;
+            filter: drop-shadow(0px 2px 4px rgba(0,0,0,0.2));
+        }
+
+        /* Botões */
+        .btn-contec {
+            background-color: var(--contec-blue);
+            color: white;
+            border: none;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+        .btn-contec:hover {
+            background-color: var(--contec-hover);
+            color: white;
+            transform: translateY(-1px);
+        }
+
+        .btn-whatsapp-solid {
+            background-color: var(--whatsapp-green);
+            color: white;
+            border: none;
+            font-weight: 500;
+            box-shadow: 0 2px 5px rgba(37, 211, 102, 0.3);
+            transition: all 0.2s;
+        }
+        .btn-whatsapp-solid:hover {
+            background-color: var(--whatsapp-hover);
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(37, 211, 102, 0.4);
+        }
+
+        .btn-delete-solid {
+            background-color: #ffebee;
+            color: #d32f2f;
+            border: 1px solid #ffcdd2;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+        .btn-delete-solid:hover {
+            background-color: #d32f2f;
+            color: white;
+            border-color: #d32f2f;
+        }
+
+        .card-empresa { 
+            cursor: pointer; 
+            transition: all 0.2s ease-in-out; 
+            border: 1px solid #e0e0e0;
+            border-left: 5px solid var(--contec-blue);
+            background: white;
+        }
+        .card-empresa:hover { 
+            transform: translateY(-4px); 
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+            border-left-color: var(--contec-hover);
+        }
+
+        .parcela-paga { 
+            background-color: #e8f5e9; 
+            text-decoration: line-through; 
+            color: #6c757d; 
+            opacity: 0.8;
+        }
+        
+        .parcela-atrasada {
+            background-color: #fff8f8; 
+            border-left: 5px solid #dc3545;
+        }
+        .texto-atraso {
+            color: #dc3545;
+            font-weight: 700;
+            font-size: 0.85em;
+            text-transform: uppercase;
+            background: #ffebee;
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+
+        #telaLogin {
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, var(--contec-blue) 0%, #002171 100%);
+        }
+        .login-box { 
+            width: 100%; 
+            max-width: 420px; 
+            padding: 2.5rem; 
+            background: white; 
+            border-radius: 12px; 
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3); 
+        }
+        .header-clicavel { cursor: pointer; }
+        .header-clicavel:hover { background-color: #f8f9fa; }
+    </style>
+</head>
+<body>
+
+    <div id="telaLogin">
+        <div class="login-box text-center">
+            <img src="logo.png" alt="Contec" class="mb-4" style="max-height: 100px;" onerror="this.style.display='none'">
+            <h5 class="mb-4 text-muted fw-bold">Gestão de Parcelamentos</h5>
+            
+            <form id="formLogin">
+                <div class="form-floating mb-3">
+                    <input type="email" class="form-control" id="emailLogin" placeholder="E-mail" required>
+                    <label>E-mail Corporativo</label>
+                </div>
+                <div class="form-floating mb-3">
+                    <input type="password" class="form-control" id="senhaLogin" placeholder="Senha" required>
+                    <label>Senha</label>
+                </div>
+                <div class="d-grid gap-2 mb-3">
+                    <button type="submit" class="btn btn-contec btn-lg py-3 shadow-sm">ACESSAR SISTEMA</button>
+                </div>
+                
+                <div class="d-flex justify-content-between small px-2">
+                    <a href="#" onclick="recuperarSenha()" class="text-decoration-none text-muted">Esqueci a senha</a>
+                    <a href="#" onclick="abrirModalAdmin()" class="text-decoration-none fw-bold" style="color: var(--contec-blue);">Criar conta</a>
+                </div>
+                <div id="msgLogin" class="mt-3 small text-danger fw-bold"></div>
+            </form>
+        </div>
+    </div>
+
+    <div id="appSistema" class="d-none">
+        
+        <header class="header-contec sticky-top">
+            <div class="container px-4">
+                <div class="row align-items-center">
+                    <div class="col-4">
+                        <a href="https://monicathayanne.github.io/portal-contec/" class="link-voltar">
+                            <i class="bi bi-arrow-left"></i> Voltar ao Portal
+                        </a>
+                    </div>
+                    
+                    <div class="col-4 text-center">
+                        <img src="logo.png" alt="Contec" class="logo-contec" onerror="this.style.display='none'; document.getElementById('txtLogo').style.display='block'">
+                        <h4 id="txtLogo" style="display:none" class="m-0 fw-bold">CONTEC</h4>
+                    </div>
+
+                    <div class="col-4 text-end">
+                        <div class="d-flex justify-content-end align-items-center gap-2">
+                            <div class="text-end d-none d-md-block lh-1 me-2">
+                                <small class="d-block text-white-50" style="font-size: 0.7rem;">USUÁRIO</small>
+                                <span class="fw-bold text-white" style="font-size: 0.85rem;" id="userEmailDisplay">...</span>
+                            </div>
+                            
+                            <button class="btn btn-sm btn-outline-light border-0" onclick="abrirConfiguracoes()" title="Configurações">
+                                <i class="bi bi-gear-fill"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-warning border-0" onclick="fazerLogout()" title="Sair">
+                                <i class="bi bi-box-arrow-right fs-6"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <div class="container mt-5 mb-5">
+
+            <div id="telaEmpresas">
+                <div class="d-flex justify-content-between align-items-center mb-4 border-bottom pb-3 flex-wrap gap-2">
+                    <div>
+                        <h4 class="fw-bold mb-0" style="color: var(--contec-blue);">Empresas</h4>
+                        <small class="text-muted">Gerencie os parcelamentos das empresas</small>
+                    </div>
+                    
+                    <div class="d-flex gap-2">
+                        <div class="input-group shadow-sm" style="width: 250px;">
+                            <span class="input-group-text bg-white border-end-0"><i class="bi bi-search"></i></span>
+                            <input type="text" id="inputBusca" class="form-control border-start-0" placeholder="Buscar empresa..." onkeyup="filtrarEmpresas()">
+                        </div>
+
+                        <button class="btn btn-contec px-4 shadow-sm" type="button" onclick="prepararNovaEmpresa()">
+                            <i class="bi bi-plus-lg me-2"></i>Nova
+                        </button>
+                    </div>
+                </div>
+
+                <div id="listaEmpresas" class="row g-3">
+                    <div class="col-12 text-center p-5 text-muted">
+                        <div class="spinner-border text-primary" role="status"></div>
+                        <div class="mt-2">Carregando dados...</div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="telaParcelamentos" class="d-none">
+                
+                <div class="mb-3">
+                    <button class="btn btn-light text-secondary border shadow-sm btn-sm px-3" onclick="irParaHome()">
+                        <i class="bi bi-arrow-left me-1"></i> Voltar
+                    </button>
+                </div>
+
+                <div class="card shadow-sm mb-4 border-0">
+                    <div class="card-body border-start border-5" style="border-color: var(--contec-blue) !important;">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <h2 id="tituloEmpresa" class="mb-1 fw-bold text-uppercase" style="color: var(--contec-blue);">EMPRESA</h2>
+                                <div class="d-flex flex-wrap gap-4 text-muted mt-2 align-items-center">
+                                    <span class="fs-6"><i class="bi bi-postcard me-2 text-primary"></i><span id="subtituloCnpj"></span></span>
+                                    <span class="fs-6"><i class="bi bi-whatsapp me-2 text-success"></i><span id="subtituloTel"></span></span>
+                                </div>
+                            </div>
+                            <div class="btn-group">
+                                <button class="btn btn-outline-secondary btn-sm" onclick="editarEmpresaAtual()" title="Editar"><i class="bi bi-pencil"></i></button>
+                                <button class="btn btn-outline-danger btn-sm" onclick="excluirEmpresaAtual()" title="Excluir"><i class="bi bi-trash"></i></button>
+                            </div>
+                        </div>
+                        <div class="alert alert-light border mt-3 mb-0 p-3 text-muted d-flex align-items-start rounded-3" id="boxObs">
+                            <i class="bi bi-info-circle-fill text-info me-2 mt-1"></i> 
+                            <span id="textoObs" style="white-space: pre-wrap;">-</span>
+                        </div>
+                    </div>
+                </div>
+
+                <button class="btn btn-contec w-100 mb-4 py-3 fw-bold shadow-sm fs-5 rounded-3" type="button" onclick="abrirModalParcelamento()">
+                    <i class="bi bi-plus-circle me-2"></i> Adicionar Novo Parcelamento
+                </button>
+
+                <div id="areaParcelamentos"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="modalAdminCheck" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered modal-sm">
+            <div class="modal-content text-center p-4">
+                <div class="mb-3">
+                    <div class="bg-light rounded-circle d-inline-flex p-3">
+                        <i class="bi bi-shield-lock-fill text-warning" style="font-size: 2rem;"></i>
+                    </div>
+                </div>
+                <h5 class="fw-bold text-secondary mb-2">Acesso Restrito</h5>
+                <p class="small text-muted mb-3">Digite a senha de administrador para autorizar a criação da conta.</p>
+                
+                <input type="password" id="inputSenhaAdmin" class="form-control text-center mb-2" placeholder="••••••••" onkeydown="if(event.key==='Enter') verificarSenhaMestra()">
+                
+                <div id="msgErroAdmin" class="small text-danger fw-bold mb-3" style="display: none;">Senha incorreta!</div>
+                
+                <div class="d-grid gap-2">
+                    <button class="btn btn-contec fw-bold" onclick="verificarSenhaMestra()">CONFIRMAR</button>
+                    <button class="btn btn-light btn-sm text-secondary" data-bs-dismiss="modal">Cancelar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="modalEmpresa" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold" id="tituloModalEmpresa">Dados da Empresa</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="formEmpresa" class="row g-3">
+                        <input type="hidden" id="idEmpresaEdicao">
+                        <div class="col-12">
+                            <label class="form-label text-muted small fw-bold">RAZÃO SOCIAL</label>
+                            <input type="text" id="nomeEmpresa" class="form-control text-uppercase bg-light" required oninput="this.value = this.value.toUpperCase()">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label text-muted small fw-bold">CNPJ</label>
+                            <input type="text" id="cnpjEmpresa" class="form-control" placeholder="00.000.000/0000-00" maxlength="18" oninput="mascaraCNPJ(this)">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label text-muted small fw-bold">WHATSAPP</label>
+                            <input type="text" id="telefoneEmpresa" class="form-control" placeholder="11999998888">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label text-muted small fw-bold">OBSERVAÇÕES (SENHAS, ETC)</label>
+                            <textarea id="obsEmpresa" class="form-control" rows="3"></textarea>
+                        </div>
+                        <div class="col-12 text-end pt-2">
+                            <button type="submit" class="btn btn-contec px-4 fw-bold">Salvar Dados</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="modalNovoParcelamento" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold">Novo Parcelamento</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="formLote">
+                        <div class="mb-3">
+                            <label class="form-label small text-muted fw-bold">TIPO DE DÍVIDA</label>
+                            <select id="tipoDivida" class="form-select" required></select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small text-muted fw-bold">Nº PROCESSO / IDENTIFICADOR</label>
+                            <input type="text" id="numeroProcesso" class="form-control text-uppercase">
+                        </div>
+                        <div class="row g-2 mb-3">
+                            <div class="col-6">
+                                <label class="form-label small text-muted fw-bold">QTD PARCELAS</label>
+                                <input type="number" id="qtdParcelas" class="form-control" value="12" required>
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label small text-muted fw-bold">VALOR PARCELA (R$)</label>
+                                <input type="number" step="0.01" id="valorParcela" class="form-control" required>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small text-muted fw-bold">DATA DA 1ª PARCELA (ADESÃO)</label>
+                            <input type="date" id="dataInicio" class="form-control" required>
+                            <small class="text-muted" style="font-size: 0.75rem;">*As próximas parcelas serão lançadas no último dia útil do mês.</small>
+                        </div>
+                        <button type="submit" class="btn btn-contec w-100 fw-bold">Gerar Parcelas</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="modalConfig" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Configurar Tipos</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="input-group mb-3">
+                        <input type="text" id="novoTipoInput" class="form-control" placeholder="Novo tipo...">
+                        <button class="btn btn-success" onclick="adicionarTipo()">Add</button>
+                    </div>
+                    <ul class="list-group list-group-flush" id="listaTiposConfig"></ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="modalRelatorio" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Relatório para Cliente</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <textarea id="textoRelatorio" class="form-control" rows="10"></textarea>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-success fw-bold" onclick="enviarRelatorioZap()"><i class="bi bi-whatsapp"></i> Enviar Whatsapp</button>
+                    <button class="btn btn-secondary" onclick="copiarRelatorio()">Copiar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        function mascaraCNPJ(i){
+            var v = i.value;
+            if(isNaN(v[v.length-1])){ 
+                i.value = v.substring(0, v.length-1);
+                return;
+            }
+            i.setAttribute("maxlength", "18");
+            if (v.length == 2 || v.length == 6) i.value += ".";
+            if (v.length == 10) i.value += "/";
+            if (v.length == 15) i.value += "-";
+        }
+    </script>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.2.0/firebase-app.js";
+        import { 
+            getFirestore, collection, addDoc, onSnapshot, deleteDoc, updateDoc, doc, query, where, orderBy, getDoc, setDoc 
+        } from "https://www.gstatic.com/firebasejs/11.2.0/firebase-firestore.js";
+        import { 
+            getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut, sendPasswordResetEmail 
+        } from "https://www.gstatic.com/firebasejs/11.2.0/firebase-auth.js";
+
+        // ============================================
+        // ⚠️ SUAS CHAVES JÁ PREENCHIDAS
+        // ============================================
+        const firebaseConfig = {
+            apiKey: "AIzaSyBHC-2agiX0NQipY4_ZseNTFw2sssvls7o",
+            authDomain: "controleparcelamentos.firebaseapp.com",
+            projectId: "controleparcelamentos",
+            storageBucket: "controleparcelamentos.firebasestorage.app",
+            messagingSenderId: "77230598136",
+            appId: "1:77230598136:web:cf641d6106ff8c9ec0180d",
+            measurementId: "G-VC0XMSGFF2"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+
+        let USER_ATUAL = null;
+        let EMPRESA_ATUAL = null;
+        let TIPOS_PARCELAMENTO = ["Simples Nacional", "INSS", "Dívida Ativa", "FGTS"];
+        let LISTA_EMPRESAS_CACHE = []; 
+
+        const SENHA_MESTRA = "Contec1801@"; // <--- SENHA DO MESTRA
+
+        // ============================================
+        // 1. LOGIN
+        // ============================================
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                USER_ATUAL = user;
+                document.getElementById("telaLogin").classList.add("d-none");
+                document.getElementById("appSistema").classList.remove("d-none");
+                document.getElementById("userEmailDisplay").innerText = user.email;
+                carregarConfiguracoes();
+                iniciarEscutaEmpresas();
+            } else {
+                USER_ATUAL = null;
+                document.getElementById("telaLogin").classList.remove("d-none");
+                document.getElementById("appSistema").classList.add("d-none");
+            }
+        });
+
+        document.getElementById("formLogin").addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const email = document.getElementById("emailLogin").value;
+            const senha = document.getElementById("senhaLogin").value;
+            const msg = document.getElementById("msgLogin");
+            msg.innerText = "Verificando...";
+            try {
+                await signInWithEmailAndPassword(auth, email, senha);
+            } catch (error) {
+                msg.innerText = "Erro: Verifique e-mail e senha.";
+            }
+        });
+
+        // ⚠️ NOVA LÓGICA DE TRAVA DE SEGURANÇA (Corrigida)
+        window.abrirModalAdmin = () => {
+            // Limpa o campo e erro anterior
+            document.getElementById("inputSenhaAdmin").value = "";
+            document.getElementById("msgErroAdmin").style.display = "none";
+            // Abre o modal DIRETO (sem perguntar nada antes)
+            new bootstrap.Modal(document.getElementById('modalAdminCheck')).show();
+            // Foca no input
+            setTimeout(() => document.getElementById("inputSenhaAdmin").focus(), 500);
+        };
+
+        window.verificarSenhaMestra = async () => {
+            const input = document.getElementById("inputSenhaAdmin").value;
+            const msgErro = document.getElementById("msgErroAdmin");
+            const email = document.getElementById("emailLogin").value;
+            const senha = document.getElementById("senhaLogin").value;
+            
+            if (input === SENHA_MESTRA) {
+                // Senha correta: Verifica se tem dados para criar
+                if(!email || !senha) {
+                    // Se não tiver, fecha o modal e avisa na tela principal (sem alert)
+                    bootstrap.Modal.getInstance(document.getElementById('modalAdminCheck')).hide();
+                    
+                    const msg = document.getElementById("msgLogin");
+                    msg.innerText = "⚠️ Autorizado! Agora preencha E-mail e Senha e clique em Criar Conta novamente.";
+                    msg.className = "mt-3 small text-warning fw-bold";
+                    return;
+                }
+
+                // Se tiver tudo, cria a conta
+                try {
+                    bootstrap.Modal.getInstance(document.getElementById('modalAdminCheck')).hide();
+                    await createUserWithEmailAndPassword(auth, email, senha);
+                    alert("✅ Conta criada com sucesso! Você já está logado.");
+                } catch (error) {
+                    alert("Erro ao criar conta: " + error.message);
+                }
+            } else {
+                // Senha incorreta
+                msgErro.style.display = "block";
+                document.getElementById("inputSenhaAdmin").value = "";
+                document.getElementById("inputSenhaAdmin").focus();
+            }
+        };
+
+        window.recuperarSenha = async () => {
+            const email = document.getElementById("emailLogin").value;
+            if(!email) return alert("Digite seu e-mail no campo para recuperar.");
+            try {
+                await sendPasswordResetEmail(auth, email);
+                alert("Link enviado para: " + email);
+            } catch (e) { alert("Erro: " + e.message); }
+        };
+
+        window.fazerLogout = () => signOut(auth);
+
+        // ============================================
+        // 2. EMPRESAS (COM BUSCA)
+        // ============================================
+        const colEmpresas = collection(db, "empresas");
+
+        function iniciarEscutaEmpresas() {
+            if(!USER_ATUAL) return;
+            const q = query(colEmpresas, where("dono", "==", USER_ATUAL.uid), orderBy("nome"));
+            
+            onSnapshot(q, (snapshot) => {
+                LISTA_EMPRESAS_CACHE = [];
+                snapshot.forEach(d => {
+                    LISTA_EMPRESAS_CACHE.push({ id: d.id, ...d.data() });
+                });
+                renderizarEmpresas(LISTA_EMPRESAS_CACHE);
+            }, (error) => {
+                if(error.code === 'failed-precondition') {
+                    const q2 = query(colEmpresas, where("dono", "==", USER_ATUAL.uid));
+                    onSnapshot(q2, (snap) => {
+                        LISTA_EMPRESAS_CACHE = [];
+                        snap.forEach(d => LISTA_EMPRESAS_CACHE.push({ id: d.id, ...d.data() }));
+                        renderizarEmpresas(LISTA_EMPRESAS_CACHE);
+                    });
+                }
+            });
+        }
+
+        window.renderizarEmpresas = (lista) => {
+            const div = document.getElementById("listaEmpresas");
+            div.innerHTML = "";
+            if(lista.length === 0) {
+                div.innerHTML = '<div class="col-12 text-center p-5 text-muted">Nenhuma empresa encontrada.</div>';
+                return;
+            }
+            lista.forEach(emp => {
+                div.innerHTML += `
+                    <div class="col-md-6 col-lg-4">
+                        <div class="card card-empresa h-100 border-0 shadow-sm" onclick="abrirDetalhesEmpresa('${emp.id}')">
+                            <div class="card-body">
+                                <h6 class="fw-bold mb-1 text-uppercase" style="color: var(--contec-blue);">${emp.nome}</h6>
+                                <small class="text-muted d-block"><i class="bi bi-postcard"></i> ${emp.cnpj || '-'}</small>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+        };
+
+        window.filtrarEmpresas = () => {
+            const termo = document.getElementById("inputBusca").value.toLowerCase();
+            const filtradas = LISTA_EMPRESAS_CACHE.filter(emp => 
+                emp.nome.toLowerCase().includes(termo) || 
+                (emp.cnpj && emp.cnpj.includes(termo))
+            );
+            renderizarEmpresas(filtradas);
+        };
+
+        document.getElementById("formEmpresa").addEventListener("submit", async (e) => {
+            e.preventDefault();
+            if(!USER_ATUAL) return;
+            const id = document.getElementById("idEmpresaEdicao").value;
+            const dados = {
+                dono: USER_ATUAL.uid,
+                nome: document.getElementById("nomeEmpresa").value.toUpperCase(),
+                cnpj: document.getElementById("cnpjEmpresa").value,
+                telefone: document.getElementById("telefoneEmpresa").value,
+                observacao: document.getElementById("obsEmpresa").value
+            };
+            if (id) {
+                await updateDoc(doc(db, "empresas", id), dados);
+                if (EMPRESA_ATUAL && EMPRESA_ATUAL.id === id) {
+                    EMPRESA_ATUAL = { id, ...dados };
+                    atualizarHeaderEmpresa();
+                }
+            } else {
+                await addDoc(colEmpresas, dados);
+            }
+            bootstrap.Modal.getInstance(document.getElementById('modalEmpresa')).hide();
+        });
+
+        // ============================================
+        // 3. PARCELAMENTOS (COM ALERTA)
+        // ============================================
+        const colPlanos = collection(db, "planos_parcelamento");
+
+        async function carregarConfiguracoes() {
+            const docRef = doc(db, "configuracoes", USER_ATUAL.uid);
+            const snap = await getDoc(docRef);
+            if (snap.exists() && snap.data().tipos) TIPOS_PARCELAMENTO = snap.data().tipos;
+            else await setDoc(docRef, { tipos: TIPOS_PARCELAMENTO });
+        }
+
+        window.abrirDetalhesEmpresa = async (id) => {
+            const docSnap = await getDoc(doc(db, "empresas", id));
+            if (!docSnap.exists()) return;
+            EMPRESA_ATUAL = { id: docSnap.id, ...docSnap.data() };
+            document.getElementById("telaEmpresas").classList.add("d-none");
+            document.getElementById("telaParcelamentos").classList.remove("d-none");
+            atualizarHeaderEmpresa();
+            carregarPlanos(id);
+        };
+
+        function atualizarHeaderEmpresa() {
+            document.getElementById("tituloEmpresa").innerText = EMPRESA_ATUAL.nome;
+            document.getElementById("subtituloCnpj").innerText = EMPRESA_ATUAL.cnpj || "N/A";
+            document.getElementById("subtituloTel").innerText = EMPRESA_ATUAL.telefone || "N/A";
+            document.getElementById("textoObs").innerText = EMPRESA_ATUAL.observacao || "Nenhuma observação.";
+        }
+
+        window.irParaHome = () => {
+            document.getElementById("telaEmpresas").classList.remove("d-none");
+            document.getElementById("telaParcelamentos").classList.add("d-none");
+            EMPRESA_ATUAL = null;
+        };
+
+        window.prepararNovaEmpresa = () => {
+            document.getElementById("formEmpresa").reset();
+            document.getElementById("idEmpresaEdicao").value = "";
+            document.getElementById("tituloModalEmpresa").innerText = "Nova Empresa";
+            new bootstrap.Modal(document.getElementById('modalEmpresa')).show();
+        };
+
+        window.editarEmpresaAtual = () => {
+            document.getElementById("idEmpresaEdicao").value = EMPRESA_ATUAL.id;
+            document.getElementById("nomeEmpresa").value = EMPRESA_ATUAL.nome;
+            document.getElementById("cnpjEmpresa").value = EMPRESA_ATUAL.cnpj;
+            document.getElementById("telefoneEmpresa").value = EMPRESA_ATUAL.telefone;
+            document.getElementById("obsEmpresa").value = EMPRESA_ATUAL.observacao;
+            document.getElementById("tituloModalEmpresa").innerText = "Editar Empresa";
+            new bootstrap.Modal(document.getElementById('modalEmpresa')).show();
+        };
+
+        window.excluirEmpresaAtual = async () => {
+            if(confirm("Deseja realmente excluir esta empresa?")) {
+                await deleteDoc(doc(db, "empresas", EMPRESA_ATUAL.id));
+                window.irParaHome();
+            }
+        };
+
+        function carregarPlanos(empresaId) {
+            const q = query(colPlanos, where("empresaId", "==", empresaId));
+            onSnapshot(q, (snapshot) => {
+                const area = document.getElementById("areaParcelamentos");
+                const abertoEl = area.querySelector('.collapse.show');
+                const idAberto = abertoEl ? abertoEl.id : null;
+                area.innerHTML = "";
+                
+                if(snapshot.empty) {
+                    area.innerHTML = '<div class="alert alert-light text-center border">Nenhum parcelamento encontrado.</div>';
+                    return;
+                }
+
+                // DATA DE HOJE ZERADA
+                const hoje = new Date();
+                hoje.setHours(0,0,0,0);
+
+                snapshot.forEach(docSnap => {
+                    const plano = docSnap.data();
+                    const planoId = docSnap.id;
+                    const pagas = plano.parcelas.filter(p => p.paga).length;
+                    const total = plano.parcelas.length;
+                    const progresso = Math.round((pagas / total) * 100);
+                    
+                    let qtdAtrasadas = 0;
+                    plano.parcelas.forEach(p => {
+                        const venc = new Date(p.vencimento + "T00:00:00");
+                        if(!p.paga && venc < hoje) qtdAtrasadas++;
+                    });
+
+                    const dadosRelatorio = encodeURIComponent(JSON.stringify({
+                        tipo: plano.tipo,
+                        processo: plano.numeroProcesso,
+                        pagas: pagas,
+                        total: total,
+                        atrasadas: qtdAtrasadas,
+                        parcelas: plano.parcelas
+                    }));
+
+                    plano.parcelas.sort((a,b) => new Date(a.vencimento) - new Date(b.vencimento));
+
+                    let htmlParcelas = "";
+                    plano.parcelas.forEach((p, index) => {
+                        const partes = p.vencimento.split('-');
+                        const dataVis = `${partes[2]}/${partes[1]}/${partes[0]}`;
+                        const vencimentoDate = new Date(p.vencimento + "T00:00:00");
+                        const isAtrasado = !p.paga && vencimentoDate < hoje;
+
+                        let classeLinha = "";
+                        let icone = "bi-circle";
+                        let corData = "text-muted";
+                        let avisoAtraso = "";
+
+                        if (p.paga) {
+                            classeLinha = "parcela-paga";
+                            icone = "bi-check-circle-fill text-success";
+                        } else if (isAtrasado) {
+                            classeLinha = "parcela-atrasada";
+                            icone = "bi-exclamation-circle-fill text-danger";
+                            corData = "texto-atraso";
+                            avisoAtraso = `<small class="text-danger fw-bold ms-2"><i class="bi bi-alarm"></i> VENCEU</small>`;
+                        }
+
+                        const telLimpo = EMPRESA_ATUAL.telefone ? EMPRESA_ATUAL.telefone.replace(/\D/g,'') : "";
+                        const linkZap = `https://wa.me/55${telLimpo}?text=${encodeURIComponent(`Segue guia referente ao Parcelamento: *${plano.tipo}* - Parcela ${index+1}/${total} - *Com vencimento:* ${dataVis}`)}`;
+
+                        htmlParcelas += `
+                            <li class="list-group-item d-flex justify-content-between align-items-center ${classeLinha}">
+                                <div role="button" onclick="alternarStatus('${planoId}', ${index})" class="d-flex align-items-center flex-grow-1">
+                                    <i class="bi ${icone} me-3 fs-5"></i>
+                                    <div>
+                                        <span class="fw-bold">Parc. ${index+1}</span> 
+                                        <small class="${corData} ms-1">${dataVis}</small>
+                                        ${avisoAtraso}
+                                    </div>
+                                </div>
+                                <div class="d-flex align-items-center">
+                                    <span class="badge bg-light text-dark border me-2">R$ ${p.valor}</span>
+                                    <a href="${linkZap}" target="_blank" class="btn btn-sm btn-whatsapp-solid rounded-circle" title="Enviar no WhatsApp">
+                                        <i class="bi bi-whatsapp"></i>
+                                    </a>
+                                </div>
+                            </li>
+                        `;
+                    });
+
+                    const classeShow = ( `c-${planoId}` === idAberto ) ? "show" : "";
+                    const badgeCor = qtdAtrasadas > 0 ? "bg-danger" : (progresso===100?'bg-success':'bg-secondary');
+                    const textoBadge = qtdAtrasadas > 0 ? `${qtdAtrasadas} Atrasadas` : `${pagas}/${total}`;
+
+                    area.innerHTML += `
+                        <div class="card mb-3 shadow-sm border-0">
+                            <div class="card-header bg-white py-3 header-clicavel" data-bs-toggle="collapse" data-bs-target="#c-${planoId}">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h6 class="mb-0 fw-bold" style="color: var(--contec-blue);"><i class="bi bi-chevron-down small me-2"></i>${plano.tipo}</h6>
+                                        ${plano.numeroProcesso ? '<small class="text-muted" style="font-size:0.8rem">Proc: '+plano.numeroProcesso+'</small>' : ''}
+                                    </div>
+                                    <span class="badge rounded-pill ${badgeCor}">${textoBadge}</span>
+                                </div>
+                                <div class="progress mt-2" style="height: 4px;">
+                                    <div class="progress-bar bg-success" style="width: ${progresso}%"></div>
+                                </div>
+                            </div>
+                            <div id="c-${planoId}" class="collapse ${classeShow}">
+                                <div class="bg-light p-2 text-center border-bottom">
+                                    <button class="btn btn-whatsapp-solid shadow-sm fw-bold px-4 py-2" onclick="gerarRelatorio('${dadosRelatorio}')">
+                                        <i class="bi bi-whatsapp me-2"></i> Resumo para Whatsapp
+                                    </button>
+                                </div>
+                                <ul class="list-group list-group-flush">${htmlParcelas}</ul>
+                                <div class="p-2 text-end bg-light">
+                                    <button class="btn btn-sm btn-delete-solid px-3" onclick="excluirPlano('${planoId}')">
+                                        <i class="bi bi-trash me-1"></i> Excluir Parcelamento
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+            });
+        }
+
+        // Funções Extras
+        window.abrirConfiguracoes = () => {
+            const lista = document.getElementById("listaTiposConfig");
+            lista.innerHTML = "";
+            TIPOS_PARCELAMENTO.forEach(tipo => lista.innerHTML += `<li class="list-group-item d-flex justify-content-between">${tipo} <button class="btn btn-sm text-danger" onclick="removerTipo('${tipo}')"><i class="bi bi-trash"></i></button></li>`);
+            new bootstrap.Modal(document.getElementById('modalConfig')).show();
+        };
+
+        window.abrirModalParcelamento = () => {
+            const select = document.getElementById("tipoDivida");
+            select.innerHTML = "";
+            TIPOS_PARCELAMENTO.forEach(tipo => select.innerHTML += `<option value="${tipo}">${tipo}</option>`);
+            new bootstrap.Modal(document.getElementById('modalNovoParcelamento')).show();
+        };
+
+        window.adicionarTipo = async () => {
+            const val = document.getElementById("novoTipoInput").value.trim();
+            if(val && !TIPOS_PARCELAMENTO.includes(val)) {
+                TIPOS_PARCELAMENTO.push(val);
+                await updateDoc(doc(db, "configuracoes", USER_ATUAL.uid), { tipos: TIPOS_PARCELAMENTO });
+                window.abrirConfiguracoes();
+            }
+        };
+        window.removerTipo = async (tipo) => {
+            if(confirm("Remover?")) {
+                TIPOS_PARCELAMENTO = TIPOS_PARCELAMENTO.filter(t => t !== tipo);
+                await updateDoc(doc(db, "configuracoes", USER_ATUAL.uid), { tipos: TIPOS_PARCELAMENTO });
+                window.abrirConfiguracoes();
+            }
+        };
+
+        document.getElementById("formLote").addEventListener("submit", async (e) => {
+            e.preventDefault();
+            
+            const qtd = parseInt(document.getElementById("qtdParcelas").value);
+            const valor = document.getElementById("valorParcela").value;
+            const inputData = document.getElementById("dataInicio").value;
+            const partes = inputData.split('-');
+            const anoInicial = parseInt(partes[0]);
+            const mesInicial = parseInt(partes[1]) - 1; 
+            const diaInicial = parseInt(partes[2]);
+
+            let lista = [];
+            for(let i = 0; i < qtd; i++) {
+                let dataIso = "";
+                if (i === 0) {
+                    dataIso = inputData;
+                } else {
+                    let data = new Date(anoInicial, mesInicial + i + 1, 0);
+                    if (data.getDay() === 6) {
+                        data.setDate(data.getDate() - 1); 
+                    } else if (data.getDay() === 0) {
+                        data.setDate(data.getDate() - 2); 
+                    }
+                    dataIso = data.toISOString().split('T')[0];
+                }
+                lista.push({ numero: i + 1, valor: valor, vencimento: dataIso, paga: false });
+            }
+
+            try {
+                await addDoc(colPlanos, {
+                    empresaId: EMPRESA_ATUAL.id,
+                    tipo: document.getElementById("tipoDivida").value,
+                    numeroProcesso: document.getElementById("numeroProcesso").value,
+                    dataCriacao: new Date(),
+                    parcelas: lista
+                });
+                bootstrap.Modal.getInstance(document.getElementById('modalNovoParcelamento')).hide();
+                e.target.reset();
+            } catch(e) { alert("Erro: " + e.message); }
+        });
+
+        window.alternarStatus = async (planoId, index) => {
+            const ref = doc(db, "planos_parcelamento", planoId);
+            const snap = await getDoc(ref);
+            if(snap.exists()) {
+                const p = snap.data();
+                p.parcelas[index].paga = !p.parcelas[index].paga;
+                await updateDoc(ref, {parcelas: p.parcelas});
+            }
+        };
+        window.excluirPlano = async (id) => { if(confirm("Apagar?")) await deleteDoc(doc(db, "planos_parcelamento", id)); };
+
+        // RELATÓRIO COM ALERTA
+        window.gerarRelatorio = (dadosString) => {
+            const dados = JSON.parse(decodeURIComponent(dadosString));
+            let valorPago = 0, valorRestante = 0;
+            dados.parcelas.forEach(p => { const v=parseFloat(p.valor); if(p.paga) valorPago+=v; else valorRestante+=v; });
+            const fmt = (v) => v.toLocaleString('pt-BR', {style:'currency', currency:'BRL'});
+            
+            let alertaAtraso = "";
+            if (dados.atrasadas > 0) {
+                alertaAtraso = `\n⚠️ *ATENÇÃO:* Existem ${dados.atrasadas} parcela(s) vencida(s)!`;
+            }
+
+            const texto = `*RELATÓRIO DE PARCELAMENTO*\nEmpresa: ${EMPRESA_ATUAL.nome}\nTipo de Parcelamento: ${dados.tipo}\n\nStatus: ${dados.pagas}/${dados.total} quitadas.${alertaAtraso}\n\n✅ Pago: ${fmt(valorPago)}\n❌ Falta: ${fmt(valorRestante)}`;
+            
+            document.getElementById("textoRelatorio").value = texto;
+            new bootstrap.Modal(document.getElementById('modalRelatorio')).show();
+        };
+
+        window.enviarRelatorioZap = () => {
+            const texto = document.getElementById("textoRelatorio").value;
+            const tel = EMPRESA_ATUAL.telefone ? EMPRESA_ATUAL.telefone.replace(/\D/g,'') : "";
+            window.open(`https://wa.me/55${tel}?text=${encodeURIComponent(texto)}`, '_blank');
+        };
+        window.copiarRelatorio = () => {
+            document.getElementById("textoRelatorio").select();
+            document.execCommand("copy");
+            alert("Copiado!");
+        };
+    </script>
+</body>
+</html>
