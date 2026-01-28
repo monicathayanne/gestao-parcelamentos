@@ -134,7 +134,25 @@
             align-items: center;
             justify-content: center;
             background: linear-gradient(135deg, var(--contec-blue) 0%, #002171 100%);
+            position: relative;
         }
+
+        .btn-voltar-login {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: rgba(255,255,255,0.7);
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 0.9rem;
+            transition: all 0.3s;
+            z-index: 10;
+        }
+        .btn-voltar-login:hover {
+            color: white;
+            transform: translateX(-3px);
+        }
+        
         .login-box { 
             width: 100%; 
             max-width: 420px; 
@@ -150,7 +168,12 @@
 <body>
 
     <div id="telaLogin">
+        <a href="https://monicathayanne.github.io/portal-contec/" class="btn-voltar-login">
+            <i class="bi bi-arrow-left me-1"></i> Voltar ao Portal
+        </a>
+
         <div class="login-box text-center">
+
             <img src="logo.png" alt="Contec" class="mb-4" style="max-height: 100px;" onerror="this.style.display='none'">
             <h5 class="mb-4 text-muted fw-bold">Gestão de Parcelamentos</h5>
             
