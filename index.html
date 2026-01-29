@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestão de Parcelamentos - Contec</title>
+    <title>Gestão Contábil - Contec</title>
     <link rel="shortcut icon" href="logo.png" type="image/png">
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -13,6 +13,11 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
     
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0d47a1">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
     <style>
         /* ================= ESTILO VISUAL CONTEC ================= */
         :root {
@@ -94,6 +99,18 @@
             border-color: #d32f2f;
         }
 
+        .btn-edit-solid {
+            background-color: #e3f2fd;
+            color: var(--contec-blue);
+            border: 1px solid #bbdefb;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+        .btn-edit-solid:hover {
+            background-color: var(--contec-blue);
+            color: white;
+        }
+
         .card-empresa { 
             cursor: pointer; 
             transition: all 0.2s ease-in-out; 
@@ -136,7 +153,15 @@
             background: linear-gradient(135deg, var(--contec-blue) 0%, #002171 100%);
             position: relative;
         }
-
+        .login-box { 
+            width: 100%; 
+            max-width: 420px; 
+            padding: 2.5rem; 
+            background: white; 
+            border-radius: 12px; 
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3); 
+        }
+        
         .btn-voltar-login {
             position: absolute;
             top: 20px;
@@ -152,15 +177,7 @@
             color: white;
             transform: translateX(-3px);
         }
-        
-        .login-box { 
-            width: 100%; 
-            max-width: 420px; 
-            padding: 2.5rem; 
-            background: white; 
-            border-radius: 12px; 
-            box-shadow: 0 20px 40px rgba(0,0,0,0.3); 
-        }
+
         .header-clicavel { cursor: pointer; }
         .header-clicavel:hover { background-color: #f8f9fa; }
     </style>
@@ -173,7 +190,6 @@
         </a>
 
         <div class="login-box text-center">
-
             <img src="logo.png" alt="Contec" class="mb-4" style="max-height: 100px;" onerror="this.style.display='none'">
             <h5 class="mb-4 text-muted fw-bold">Gestão de Parcelamentos</h5>
             
@@ -239,7 +255,7 @@
             <div id="telaEmpresas">
                 <div class="d-flex justify-content-between align-items-center mb-4 border-bottom pb-3 flex-wrap gap-2">
                     <div>
-                        <h4 class="fw-bold mb-0" style="color: var(--contec-blue);">Empresas</h4>
+                        <h4 class="fw-bold mb-0" style="color: var(--contec-blue);">EMPRESAS</h4>
                         <small class="text-muted">Gerencie os parcelamentos das empresas</small>
                     </div>
                     
@@ -375,24 +391,54 @@
                         </div>
                         <div class="mb-3">
                             <label class="form-label small text-muted fw-bold">Nº PROCESSO / IDENTIFICADOR</label>
-                            <input type="text" id="numeroProcesso" class="form-control text-uppercase">
+                            <input type="text" id="numeroProcesso" class="form-control text-uppercase" placeholder="Ex: Proc. 1234/2026 (Opcional)">
                         </div>
+                        
                         <div class="row g-2 mb-3">
                             <div class="col-6">
-                                <label class="form-label small text-muted fw-bold">QTD PARCELAS</label>
+                                <label class="form-label small text-muted fw-bold text-success">VALOR 1ª PARC. (ADESÃO)</label>
+                                <input type="text" id="valorEntrada" class="form-control border-success" required placeholder="0,00" oninput="mascaraMoeda(this)">
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label small text-muted fw-bold">VALOR DEMAIS PARC.</label>
+                                <input type="text" id="valorRestante" class="form-control" required placeholder="0,00" oninput="mascaraMoeda(this)">
+                            </div>
+                        </div>
+
+                        <div class="row g-2 mb-3">
+                            <div class="col-6">
+                                <label class="form-label small text-muted fw-bold">TOTAL DE PARCELAS</label>
                                 <input type="number" id="qtdParcelas" class="form-control" value="12" required>
                             </div>
                             <div class="col-6">
-                                <label class="form-label small text-muted fw-bold">VALOR PARCELA (R$)</label>
-                                <input type="number" step="0.01" id="valorParcela" class="form-control" required>
+                                <label class="form-label small text-muted fw-bold">DATA DA 1ª PARCELA</label>
+                                <input type="date" id="dataInicio" class="form-control" required>
                             </div>
                         </div>
-                        <div class="mb-3">
-                            <label class="form-label small text-muted fw-bold">DATA DA 1ª PARCELA (ADESÃO)</label>
-                            <input type="date" id="dataInicio" class="form-control" required>
-                            <small class="text-muted" style="font-size: 0.75rem;">*As próximas parcelas serão lançadas no último dia útil do mês.</small>
-                        </div>
+                        <small class="d-block text-muted mb-3" style="font-size: 0.75rem;">*A 1ª parcela usa o valor de Adesão. As demais (2 em diante) usam o outro valor e caem no último dia útil do mês.</small>
                         <button type="submit" class="btn btn-contec w-100 fw-bold">Gerar Parcelas</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="modalEditarParcela" tabindex="-1">
+        <div class="modal-dialog modal-sm modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title fs-6 fw-bold">Editar Valor da Parcela</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="formEditarParcela">
+                        <input type="hidden" id="editPlanoId">
+                        <input type="hidden" id="editIndex">
+                        <div class="mb-3">
+                            <label class="form-label small text-muted fw-bold">NOVO VALOR (R$)</label>
+                            <input type="text" id="valorEditar" class="form-control fs-4 text-center text-primary fw-bold" required oninput="mascaraMoeda(this)">
+                        </div>
+                        <button type="submit" class="btn btn-contec w-100 fw-bold">Salvar Alteração</button>
                     </form>
                 </div>
             </div>
@@ -421,7 +467,7 @@
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">Relatório para Cliente</h5>
+                    <h5 class="modal-title">Relatório do Parcelamento</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
@@ -438,6 +484,16 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
     <script>
+        // Registrar o PWA
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js')
+                .then(() => console.log('App pronto para instalar!'));
+        }
+
+        // ============================================
+        // 🛠️ MÁSCARAS E FORMATAÇÃO
+        // ============================================
+        
         function mascaraCNPJ(i){
             var v = i.value;
             if(isNaN(v[v.length-1])){ 
@@ -448,6 +504,24 @@
             if (v.length == 2 || v.length == 6) i.value += ".";
             if (v.length == 10) i.value += "/";
             if (v.length == 15) i.value += "-";
+        }
+
+        function mascaraMoeda(i) {
+            var v = i.value.replace(/\D/g,'');
+            v = (v/100).toFixed(2) + '';
+            v = v.replace(".", ",");
+            v = v.replace(/(\d)(?=(\d{3})+(?!\d))/g, '$1.');
+            i.value = v;
+        }
+
+        function converterMoedaParaFloat(valorString) {
+            // Remove pontos de milhar e troca vírgula por ponto
+            if(!valorString) return 0;
+            return parseFloat(valorString.replace(/\./g, '').replace(',', '.'));
+        }
+
+        function formatarFloatParaMoeda(valorFloat) {
+            return valorFloat.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2});
         }
     </script>
 
@@ -461,7 +535,7 @@
         } from "https://www.gstatic.com/firebasejs/11.2.0/firebase-auth.js";
 
         // ============================================
-        // ⚠️ SUAS CHAVES JÁ PREENCHIDAS
+        // ⚠️CHAVES FIREBASE
         // ============================================
         const firebaseConfig = {
             apiKey: "AIzaSyBHC-2agiX0NQipY4_ZseNTFw2sssvls7o",
@@ -482,7 +556,7 @@
         let TIPOS_PARCELAMENTO = ["Simples Nacional", "INSS", "Dívida Ativa", "FGTS"];
         let LISTA_EMPRESAS_CACHE = []; 
 
-        const SENHA_MESTRA = "Contec1801@"; // <--- SENHA DO MESTRA
+        const SENHA_MESTRA = "Contec1801@"; 
 
         // ============================================
         // 1. LOGIN
@@ -515,14 +589,10 @@
             }
         });
 
-        // ⚠️ NOVA LÓGICA DE TRAVA DE SEGURANÇA (Corrigida)
         window.abrirModalAdmin = () => {
-            // Limpa o campo e erro anterior
             document.getElementById("inputSenhaAdmin").value = "";
             document.getElementById("msgErroAdmin").style.display = "none";
-            // Abre o modal DIRETO (sem perguntar nada antes)
             new bootstrap.Modal(document.getElementById('modalAdminCheck')).show();
-            // Foca no input
             setTimeout(() => document.getElementById("inputSenhaAdmin").focus(), 500);
         };
 
@@ -533,9 +603,7 @@
             const senha = document.getElementById("senhaLogin").value;
             
             if (input === SENHA_MESTRA) {
-                // Senha correta: Verifica se tem dados para criar
                 if(!email || !senha) {
-                    // Se não tiver, fecha o modal e avisa na tela principal (sem alert)
                     bootstrap.Modal.getInstance(document.getElementById('modalAdminCheck')).hide();
                     
                     const msg = document.getElementById("msgLogin");
@@ -544,7 +612,6 @@
                     return;
                 }
 
-                // Se tiver tudo, cria a conta
                 try {
                     bootstrap.Modal.getInstance(document.getElementById('modalAdminCheck')).hide();
                     await createUserWithEmailAndPassword(auth, email, senha);
@@ -553,7 +620,6 @@
                     alert("Erro ao criar conta: " + error.message);
                 }
             } else {
-                // Senha incorreta
                 msgErro.style.display = "block";
                 document.getElementById("inputSenhaAdmin").value = "";
                 document.getElementById("inputSenhaAdmin").focus();
@@ -572,7 +638,7 @@
         window.fazerLogout = () => signOut(auth);
 
         // ============================================
-        // 2. EMPRESAS (COM BUSCA)
+        // 2. BUSCA DE EMPRESAS
         // ============================================
         const colEmpresas = collection(db, "empresas");
 
@@ -652,7 +718,7 @@
         });
 
         // ============================================
-        // 3. PARCELAMENTOS (COM ALERTA)
+        // 3. PARCELAMENTOS
         // ============================================
         const colPlanos = collection(db, "planos_parcelamento");
 
@@ -723,7 +789,6 @@
                     return;
                 }
 
-                // DATA DE HOJE ZERADA
                 const hoje = new Date();
                 hoje.setHours(0,0,0,0);
 
@@ -773,8 +838,13 @@
                             avisoAtraso = `<small class="text-danger fw-bold ms-2"><i class="bi bi-alarm"></i> VENCEU</small>`;
                         }
 
+                        const ident = plano.numeroProcesso ? ` - Nº: ${plano.numeroProcesso}` : "";
+                        const textoZap = `Segue guia referente ao Parcelamento: *${plano.tipo}*${ident} - Parcela ${index+1}/${total} - *Com vencimento:* ${dataVis}`;
                         const telLimpo = EMPRESA_ATUAL.telefone ? EMPRESA_ATUAL.telefone.replace(/\D/g,'') : "";
-                        const linkZap = `https://wa.me/55${telLimpo}?text=${encodeURIComponent(`Segue guia referente ao Parcelamento: *${plano.tipo}* - Parcela ${index+1}/${total} - *Com vencimento:* ${dataVis}`)}`;
+                        const linkZap = `https://wa.me/55${telLimpo}?text=${encodeURIComponent(textoZap)}`;
+
+                        // Formata valor para exibição (com vírgula)
+                        const valDisplay = parseFloat(p.valor).toLocaleString('pt-BR', {minimumFractionDigits: 2});
 
                         htmlParcelas += `
                             <li class="list-group-item d-flex justify-content-between align-items-center ${classeLinha}">
@@ -786,8 +856,13 @@
                                         ${avisoAtraso}
                                     </div>
                                 </div>
-                                <div class="d-flex align-items-center">
-                                    <span class="badge bg-light text-dark border me-2">R$ ${p.valor}</span>
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="badge bg-light text-dark border">R$ ${valDisplay}</span>
+                                    
+                                    <button class="btn btn-sm btn-edit-solid rounded-circle" onclick="prepararEdicaoParcela('${planoId}', ${index}, '${p.valor}')" title="Editar Valor">
+                                        <i class="bi bi-pencil-fill" style="font-size: 0.7rem;"></i>
+                                    </button>
+
                                     <a href="${linkZap}" target="_blank" class="btn btn-sm btn-whatsapp-solid rounded-circle" title="Enviar no WhatsApp">
                                         <i class="bi bi-whatsapp"></i>
                                     </a>
@@ -833,6 +908,46 @@
             });
         }
 
+        // ============================================
+        // 🛠️ FUNÇÕES DE EDIÇÃO DE PARCELA
+        // ============================================
+
+        window.prepararEdicaoParcela = (planoId, index, valorAtual) => {
+            document.getElementById("editPlanoId").value = planoId;
+            document.getElementById("editIndex").value = index;
+            // Preenche o input já formatado
+            const inputVal = document.getElementById("valorEditar");
+            inputVal.value = parseFloat(valorAtual).toLocaleString('pt-BR', {minimumFractionDigits: 2});
+            // Aciona máscara manual para garantir formatação correta se precisar
+            mascaraMoeda(inputVal);
+            
+            new bootstrap.Modal(document.getElementById('modalEditarParcela')).show();
+        };
+
+        document.getElementById("formEditarParcela").addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const planoId = document.getElementById("editPlanoId").value;
+            const index = parseInt(document.getElementById("editIndex").value);
+            const novoValorStr = document.getElementById("valorEditar").value;
+            const novoValor = converterMoedaParaFloat(novoValorStr); // Converte "1.000,00" para 1000.00
+
+            try {
+                const ref = doc(db, "planos_parcelamento", planoId);
+                const snap = await getDoc(ref);
+                if(snap.exists()) {
+                    const dados = snap.data();
+                    // Atualiza apenas o valor daquela parcela
+                    dados.parcelas[index].valor = novoValor;
+                    
+                    await updateDoc(ref, { parcelas: dados.parcelas });
+                    
+                    bootstrap.Modal.getInstance(document.getElementById('modalEditarParcela')).hide();
+                }
+            } catch (err) {
+                alert("Erro ao editar: " + err.message);
+            }
+        });
+
         // Funções Extras
         window.abrirConfiguracoes = () => {
             const lista = document.getElementById("listaTiposConfig");
@@ -845,6 +960,11 @@
             const select = document.getElementById("tipoDivida");
             select.innerHTML = "";
             TIPOS_PARCELAMENTO.forEach(tipo => select.innerHTML += `<option value="${tipo}">${tipo}</option>`);
+            // Limpa campos
+            document.getElementById("valorEntrada").value = "";
+            document.getElementById("valorRestante").value = "";
+            document.getElementById("dataInicio").value = "";
+            
             new bootstrap.Modal(document.getElementById('modalNovoParcelamento')).show();
         };
 
@@ -864,12 +984,16 @@
             }
         };
 
+        // LÓGICA DE GERAÇÃO (ATUALIZADA PARA USAR MÁSCARA)
         document.getElementById("formLote").addEventListener("submit", async (e) => {
             e.preventDefault();
             
             const qtd = parseInt(document.getElementById("qtdParcelas").value);
-            const valor = document.getElementById("valorParcela").value;
+            // Converte strings "1.000,00" para float 1000.00
+            const valEntrada = converterMoedaParaFloat(document.getElementById("valorEntrada").value);
+            const valResto = converterMoedaParaFloat(document.getElementById("valorRestante").value);
             const inputData = document.getElementById("dataInicio").value;
+            
             const partes = inputData.split('-');
             const anoInicial = parseInt(partes[0]);
             const mesInicial = parseInt(partes[1]) - 1; 
@@ -878,10 +1002,14 @@
             let lista = [];
             for(let i = 0; i < qtd; i++) {
                 let dataIso = "";
+                let valorDaVez = 0;
+
                 if (i === 0) {
                     dataIso = inputData;
+                    valorDaVez = valEntrada;
                 } else {
-                    let data = new Date(anoInicial, mesInicial + i + 1, 0);
+                    valorDaVez = valResto;
+                    let data = new Date(anoInicial, mesInicial + i + 1, 0); 
                     if (data.getDay() === 6) {
                         data.setDate(data.getDate() - 1); 
                     } else if (data.getDay() === 0) {
@@ -889,7 +1017,7 @@
                     }
                     dataIso = data.toISOString().split('T')[0];
                 }
-                lista.push({ numero: i + 1, valor: valor, vencimento: dataIso, paga: false });
+                lista.push({ numero: i + 1, valor: valorDaVez, vencimento: dataIso, paga: false });
             }
 
             try {
@@ -914,9 +1042,9 @@
                 await updateDoc(ref, {parcelas: p.parcelas});
             }
         };
-        window.excluirPlano = async (id) => { if(confirm("Apagar?")) await deleteDoc(doc(db, "planos_parcelamento", id)); };
+        window.excluirPlano = async (id) => { if(confirm("Tem certeza que deseja apagar parcelamento?")) await deleteDoc(doc(db, "planos_parcelamento", id)); };
 
-        // RELATÓRIO COM ALERTA
+        // RELATÓRIO
         window.gerarRelatorio = (dadosString) => {
             const dados = JSON.parse(decodeURIComponent(dadosString));
             let valorPago = 0, valorRestante = 0;
@@ -928,7 +1056,9 @@
                 alertaAtraso = `\n⚠️ *ATENÇÃO:* Existem ${dados.atrasadas} parcela(s) vencida(s)!`;
             }
 
-            const texto = `*RELATÓRIO DE PARCELAMENTO*\nEmpresa: ${EMPRESA_ATUAL.nome}\nTipo de Parcelamento: ${dados.tipo}\n\nStatus: ${dados.pagas}/${dados.total} quitadas.${alertaAtraso}\n\n✅ Pago: ${fmt(valorPago)}\n❌ Falta: ${fmt(valorRestante)}`;
+            const procRef = dados.processo ? `Processo/Ref: ${dados.processo}\n` : "";
+
+            const texto = `*RELATÓRIO DE PARCELAMENTO*\nEmpresa: ${EMPRESA_ATUAL.nome}\nTipo: ${dados.tipo}\n${procRef}\nStatus: ${dados.pagas}/${dados.total} quitadas.${alertaAtraso}\n\n✅ Pago: ${fmt(valorPago)}\n❌ Falta: ${fmt(valorRestante)}`;
             
             document.getElementById("textoRelatorio").value = texto;
             new bootstrap.Modal(document.getElementById('modalRelatorio')).show();
