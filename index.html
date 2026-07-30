@@ -8,10 +8,11 @@
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#0d47a1">
@@ -21,15 +22,15 @@
     <style>
         /* ================= ESTILO VISUAL CONTEC ================= */
         :root {
-            --contec-blue: #0d47a1; 
-            --contec-hover: #063175;
+            --contec-blue: #063175; 
+            --contec-hover: #0d47a1; 
             --whatsapp-green: #25D366;
             --whatsapp-hover: #128C7E;
         }
 
         body { 
             background-color: #f4f6f9; 
-            font-family: 'Roboto', sans-serif;
+            font-family: 'Inter', sans-serif;
         }
 
         /* CABEÇALHO */
@@ -86,6 +87,19 @@
             box-shadow: 0 4px 8px rgba(37, 211, 102, 0.4);
         }
 
+        .btn-email-solid {
+            background-color: #e7f0ff;
+            color: var(--contec-blue);
+            border: 1px solid #c7dbff;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+        .btn-email-solid:hover {
+            background-color: var(--contec-blue);
+            color: white;
+            border-color: var(--contec-blue);
+        }
+
         .btn-delete-solid {
             background-color: #ffebee;
             color: #d32f2f;
@@ -119,10 +133,21 @@
             background: white;
         }
         .card-empresa:hover { 
-            transform: translateY(-4px); 
-            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+            transform: translateY(-2px); 
+            box-shadow: 0 6px 15px rgba(0,0,0,0.1);
             border-left-color: var(--contec-hover);
         }
+
+        /* BOLINHA DE STATUS DE ENVIO */
+        .dot-status {
+            width: 13px; height: 13px; border-radius: 50%;
+            flex-shrink: 0; display: inline-block;
+        }
+        .dot-vermelho { background: #dc3545; box-shadow: 0 0 0 3px rgba(220,53,69,.18); }
+        .dot-verde    { background: #198754; box-shadow: 0 0 0 3px rgba(25,135,84,.18); }
+        .dot-cinza    { background: #adb5bd; }
+
+        .legenda-dot { display: inline-flex; align-items: center; gap: 5px; font-size: 0.78rem; }
 
         .parcela-paga { 
             background-color: #e8f5e9; 
@@ -180,6 +205,9 @@
 
         .header-clicavel { cursor: pointer; }
         .header-clicavel:hover { background-color: #f8f9fa; }
+
+        .badge-arquivo-liquidado { background-color: #198754; }
+        .badge-arquivo-desistencia { background-color: #6c757d; }
     </style>
 </head>
 <body>
@@ -253,17 +281,21 @@
         <div class="container mt-5 mb-5">
 
             <div id="telaEmpresas">
-                <div class="d-flex justify-content-between align-items-center mb-4 border-bottom pb-3 flex-wrap gap-2">
+                <div class="d-flex justify-content-between align-items-center mb-2 border-bottom pb-3 flex-wrap gap-2">
                     <div>
                         <h4 class="fw-bold mb-0" style="color: var(--contec-blue);">EMPRESAS</h4>
                         <small class="text-muted">Gerencie os parcelamentos das empresas</small>
                     </div>
                     
-                    <div class="d-flex gap-2">
-                        <div class="input-group shadow-sm" style="width: 250px;">
+                    <div class="d-flex gap-2 flex-wrap">
+                        <div class="input-group shadow-sm" style="width: 230px;">
                             <span class="input-group-text bg-white border-end-0"><i class="bi bi-search"></i></span>
                             <input type="text" id="inputBusca" class="form-control border-start-0" placeholder="Buscar empresa..." onkeyup="filtrarEmpresas()">
                         </div>
+
+                        <button class="btn btn-outline-success shadow-sm fw-bold" type="button" onclick="exportarEmpresasExcel()">
+                            <i class="bi bi-file-earmark-excel me-1"></i>Exportar
+                        </button>
 
                         <button class="btn btn-contec px-4 shadow-sm" type="button" onclick="prepararNovaEmpresa()">
                             <i class="bi bi-plus-lg me-2"></i>Nova
@@ -271,7 +303,13 @@
                     </div>
                 </div>
 
-                <div id="listaEmpresas" class="row g-3">
+                <div class="mb-3 d-flex gap-3 flex-wrap text-muted">
+                    <span class="legenda-dot"><span class="dot-status dot-vermelho"></span> Envio pendente</span>
+                    <span class="legenda-dot"><span class="dot-status dot-verde"></span> Enviado</span>
+                    <span class="legenda-dot"><span class="dot-status dot-cinza"></span> Sem parcela no mês</span>
+                </div>
+
+                <div id="listaEmpresas" class="row g-2">
                     <div class="col-12 text-center p-5 text-muted">
                         <div class="spinner-border text-primary" role="status"></div>
                         <div class="mt-2">Carregando dados...</div>
@@ -295,6 +333,7 @@
                                 <div class="d-flex flex-wrap gap-4 text-muted mt-2 align-items-center">
                                     <span class="fs-6"><i class="bi bi-postcard me-2 text-primary"></i><span id="subtituloCnpj"></span></span>
                                     <span class="fs-6"><i class="bi bi-whatsapp me-2 text-success"></i><span id="subtituloTel"></span></span>
+                                    <span class="fs-6"><i class="bi bi-envelope me-2 text-primary"></i><span id="subtituloEmail"></span></span>
                                 </div>
                             </div>
                             <div class="btn-group">
@@ -309,9 +348,18 @@
                     </div>
                 </div>
 
-                <button class="btn btn-contec w-100 mb-4 py-3 fw-bold shadow-sm fs-5 rounded-3" type="button" onclick="abrirModalParcelamento()">
+                <button class="btn btn-contec w-100 mb-2 py-3 fw-bold shadow-sm fs-5 rounded-3" type="button" onclick="abrirModalParcelamento()">
                     <i class="bi bi-plus-circle me-2"></i> Adicionar Novo Parcelamento
                 </button>
+
+                <div class="d-flex gap-2 mb-4">
+                    <button class="btn btn-outline-secondary flex-grow-1 fw-bold" type="button" onclick="abrirArquivo()">
+                        <i class="bi bi-archive me-1"></i> Arquivo / Histórico <span class="badge bg-secondary ms-1" id="badgeArquivo">0</span>
+                    </button>
+                    <button class="btn btn-outline-success flex-grow-1 fw-bold" type="button" onclick="exportarParcelamentosEmpresaExcel()">
+                        <i class="bi bi-file-earmark-excel me-1"></i> Exportar Excel
+                    </button>
+                </div>
 
                 <div id="areaParcelamentos"></div>
             </div>
@@ -362,6 +410,10 @@
                         <div class="col-6">
                             <label class="form-label text-muted small fw-bold">WHATSAPP</label>
                             <input type="text" id="telefoneEmpresa" class="form-control" placeholder="11999998888">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label text-muted small fw-bold">E-MAIL</label>
+                            <input type="email" id="emailEmpresa" class="form-control" placeholder="email@empresa.com.br">
                         </div>
                         <div class="col-12">
                             <label class="form-label text-muted small fw-bold">OBSERVAÇÕES (SENHAS, ETC)</label>
@@ -445,6 +497,43 @@
         </div>
     </div>
 
+    <!-- MODAL: Arquivar (Liquidar / Desistência) -->
+    <div class="modal fade" id="modalArquivar" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered modal-sm">
+            <div class="modal-content text-center p-4">
+                <input type="hidden" id="arquivarPlanoId">
+                <div class="mb-3">
+                    <div class="bg-light rounded-circle d-inline-flex p-3">
+                        <i class="bi bi-archive-fill text-secondary" style="font-size: 2rem;"></i>
+                    </div>
+                </div>
+                <h5 class="fw-bold text-secondary mb-1">Encerrar Parcelamento</h5>
+                <p class="small text-muted mb-3">O parcelamento sai da lista de ativos e vai para o Arquivo/Histórico. Você pode reativar depois.</p>
+                <div class="d-grid gap-2">
+                    <button class="btn btn-success fw-bold" onclick="confirmarArquivar('Liquidado')"><i class="bi bi-check-circle me-1"></i> Liquidado (quitado)</button>
+                    <button class="btn btn-outline-secondary fw-bold" onclick="confirmarArquivar('Desistência')"><i class="bi bi-x-circle me-1"></i> Desistência</button>
+                    <button class="btn btn-light btn-sm text-secondary" data-bs-dismiss="modal">Cancelar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: Arquivo / Histórico -->
+    <div class="modal fade" id="modalArquivo" tabindex="-1">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold"><i class="bi bi-archive me-2"></i>Arquivo de Parcelamentos</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="small text-muted">Parcelamentos liquidados ou com desistência desta empresa.</p>
+                    <div id="listaArquivo"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="modal fade" id="modalConfig" tabindex="-1">
         <div class="modal-dialog">
             <div class="modal-content">
@@ -474,7 +563,8 @@
                     <textarea id="textoRelatorio" class="form-control" rows="10"></textarea>
                 </div>
                 <div class="modal-footer">
-                    <button class="btn btn-success fw-bold" onclick="enviarRelatorioZap()"><i class="bi bi-whatsapp"></i> Enviar Whatsapp</button>
+                    <button class="btn btn-success fw-bold" onclick="enviarRelatorioZap()"><i class="bi bi-whatsapp"></i> WhatsApp</button>
+                    <button class="btn btn-contec fw-bold" onclick="enviarRelatorioEmail()"><i class="bi bi-envelope"></i> E-mail</button>
                     <button class="btn btn-secondary" onclick="copiarRelatorio()">Copiar</button>
                 </div>
             </div>
@@ -528,7 +618,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.2.0/firebase-app.js";
         import { 
-            getFirestore, collection, addDoc, onSnapshot, deleteDoc, updateDoc, doc, query, where, orderBy, getDoc, setDoc 
+            getFirestore, collection, addDoc, onSnapshot, deleteDoc, updateDoc, doc, query, where, orderBy, getDoc, getDocs, setDoc 
         } from "https://www.gstatic.com/firebasejs/11.2.0/firebase-firestore.js";
         import { 
             getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut, sendPasswordResetEmail 
@@ -555,6 +645,9 @@
         let EMPRESA_ATUAL = null;
         let TIPOS_PARCELAMENTO = ["Simples Nacional", "INSS", "Dívida Ativa", "FGTS"];
         let LISTA_EMPRESAS_CACHE = []; 
+        let STATUS_ENVIO = {};        // empresaId -> 'verde' | 'vermelho' | 'cinza'
+        let PLANOS_ATIVOS_ATUAL = []; // planos ativos da empresa aberta
+        let PLANOS_ARQUIVO_ATUAL = [];// planos arquivados da empresa aberta
 
         const SENHA_MESTRA = "Contec1801@"; 
 
@@ -652,16 +745,58 @@
                     LISTA_EMPRESAS_CACHE.push({ id: d.id, ...d.data() });
                 });
                 renderizarEmpresas(LISTA_EMPRESAS_CACHE);
+                atualizarStatusEnvio();
             }, (error) => {
                 if(error.code === 'failed-precondition') {
                     const q2 = query(colEmpresas, where("dono", "==", USER_ATUAL.uid));
                     onSnapshot(q2, (snap) => {
                         LISTA_EMPRESAS_CACHE = [];
                         snap.forEach(d => LISTA_EMPRESAS_CACHE.push({ id: d.id, ...d.data() }));
+                        LISTA_EMPRESAS_CACHE.sort((a,b) => (a.nome||"").localeCompare(b.nome||""));
                         renderizarEmpresas(LISTA_EMPRESAS_CACHE);
+                        atualizarStatusEnvio();
                     });
                 }
             });
+        }
+
+        // Calcula, por empresa, se as guias da competência (mês) atual já foram enviadas
+        const colPlanos = collection(db, "planos_parcelamento");
+
+        async function atualizarStatusEnvio() {
+            if(!USER_ATUAL || LISTA_EMPRESAS_CACHE.length === 0) return;
+            const ids = LISTA_EMPRESAS_CACHE.map(e => e.id);
+            const novoStatus = {};
+            ids.forEach(id => novoStatus[id] = 'cinza');
+
+            const agora = new Date();
+            const compAtual = `${agora.getFullYear()}-${String(agora.getMonth()+1).padStart(2,'0')}`;
+
+            try {
+                for (let i = 0; i < ids.length; i += 30) {
+                    const lote = ids.slice(i, i + 30);
+                    const snap = await getDocs(query(colPlanos, where("empresaId", "in", lote)));
+                    snap.forEach(d => {
+                        const p = d.data();
+                        if (p.arquivado) return;
+                        const eid = p.empresaId;
+                        (p.parcelas || []).forEach(par => {
+                            if (!par.vencimento) return;
+                            if (par.vencimento.slice(0,7) === compAtual) {
+                                if (!par.paga && !par.dataEnvio) {
+                                    novoStatus[eid] = 'vermelho';
+                                } else if (novoStatus[eid] !== 'vermelho') {
+                                    novoStatus[eid] = 'verde';
+                                }
+                            }
+                        });
+                    });
+                }
+                STATUS_ENVIO = novoStatus;
+                renderizarEmpresas(LISTA_EMPRESAS_CACHE);
+            } catch(e) {
+                console.warn("Não foi possível calcular status de envio:", e.message);
+            }
         }
 
         window.renderizarEmpresas = (lista) => {
@@ -672,12 +807,22 @@
                 return;
             }
             lista.forEach(emp => {
+                const cor = STATUS_ENVIO[emp.id] || 'cinza';
+                const titulo = cor === 'vermelho' ? 'Envio pendente nesta competência'
+                             : cor === 'verde'   ? 'Guias desta competência enviadas'
+                             : 'Sem parcela nesta competência';
                 div.innerHTML += `
-                    <div class="col-md-6 col-lg-4">
-                        <div class="card card-empresa h-100 border-0 shadow-sm" onclick="abrirDetalhesEmpresa('${emp.id}')">
-                            <div class="card-body">
-                                <h6 class="fw-bold mb-1 text-uppercase" style="color: var(--contec-blue);">${emp.nome}</h6>
-                                <small class="text-muted d-block"><i class="bi bi-postcard"></i> ${emp.cnpj || '-'}</small>
+                    <div class="col-12">
+                        <div class="card card-empresa border-0 shadow-sm" onclick="abrirDetalhesEmpresa('${emp.id}')">
+                            <div class="d-flex justify-content-between align-items-center px-3 py-2">
+                                <div class="d-flex align-items-center gap-3" style="min-width:0;">
+                                    <span class="dot-status dot-${cor}" title="${titulo}"></span>
+                                    <div style="min-width:0;">
+                                        <h6 class="fw-bold m-0 text-uppercase text-truncate" style="color: var(--contec-blue);">${emp.nome}</h6>
+                                        <small class="text-muted"><i class="bi bi-postcard"></i> ${emp.cnpj || '-'}</small>
+                                    </div>
+                                </div>
+                                <i class="bi bi-chevron-right text-muted flex-shrink-0 ms-2"></i>
                             </div>
                         </div>
                     </div>
@@ -703,6 +848,7 @@
                 nome: document.getElementById("nomeEmpresa").value.toUpperCase(),
                 cnpj: document.getElementById("cnpjEmpresa").value,
                 telefone: document.getElementById("telefoneEmpresa").value,
+                email: document.getElementById("emailEmpresa").value,
                 observacao: document.getElementById("obsEmpresa").value
             };
             if (id) {
@@ -720,7 +866,6 @@
         // ============================================
         // 3. PARCELAMENTOS
         // ============================================
-        const colPlanos = collection(db, "planos_parcelamento");
 
         async function carregarConfiguracoes() {
             const docRef = doc(db, "configuracoes", USER_ATUAL.uid);
@@ -743,6 +888,7 @@
             document.getElementById("tituloEmpresa").innerText = EMPRESA_ATUAL.nome;
             document.getElementById("subtituloCnpj").innerText = EMPRESA_ATUAL.cnpj || "N/A";
             document.getElementById("subtituloTel").innerText = EMPRESA_ATUAL.telefone || "N/A";
+            document.getElementById("subtituloEmail").innerText = EMPRESA_ATUAL.email || "N/A";
             document.getElementById("textoObs").innerText = EMPRESA_ATUAL.observacao || "Nenhuma observação.";
         }
 
@@ -750,6 +896,7 @@
             document.getElementById("telaEmpresas").classList.remove("d-none");
             document.getElementById("telaParcelamentos").classList.add("d-none");
             EMPRESA_ATUAL = null;
+            atualizarStatusEnvio(); // atualiza as bolinhas ao voltar
         };
 
         window.prepararNovaEmpresa = () => {
@@ -764,6 +911,7 @@
             document.getElementById("nomeEmpresa").value = EMPRESA_ATUAL.nome;
             document.getElementById("cnpjEmpresa").value = EMPRESA_ATUAL.cnpj;
             document.getElementById("telefoneEmpresa").value = EMPRESA_ATUAL.telefone;
+            document.getElementById("emailEmpresa").value = EMPRESA_ATUAL.email || "";
             document.getElementById("obsEmpresa").value = EMPRESA_ATUAL.observacao;
             document.getElementById("tituloModalEmpresa").innerText = "Editar Empresa";
             new bootstrap.Modal(document.getElementById('modalEmpresa')).show();
@@ -783,18 +931,24 @@
                 const abertoEl = area.querySelector('.collapse.show');
                 const idAberto = abertoEl ? abertoEl.id : null;
                 area.innerHTML = "";
-                
-                if(snapshot.empty) {
-                    area.innerHTML = '<div class="alert alert-light text-center border">Nenhum parcelamento encontrado.</div>';
+
+                // Separa ativos e arquivados
+                const todos = [];
+                snapshot.forEach(d => todos.push({ id: d.id, ...d.data() }));
+                PLANOS_ATIVOS_ATUAL = todos.filter(p => !p.arquivado);
+                PLANOS_ARQUIVO_ATUAL = todos.filter(p => p.arquivado);
+                document.getElementById("badgeArquivo").innerText = PLANOS_ARQUIVO_ATUAL.length;
+
+                if(PLANOS_ATIVOS_ATUAL.length === 0) {
+                    area.innerHTML = '<div class="alert alert-light text-center border">Nenhum parcelamento ativo.</div>';
                     return;
                 }
 
                 const hoje = new Date();
                 hoje.setHours(0,0,0,0);
 
-                snapshot.forEach(docSnap => {
-                    const plano = docSnap.data();
-                    const planoId = docSnap.id;
+                PLANOS_ATIVOS_ATUAL.forEach(plano => {
+                    const planoId = plano.id;
                     const pagas = plano.parcelas.filter(p => p.paga).length;
                     const total = plano.parcelas.length;
                     const progresso = Math.round((pagas / total) * 100);
@@ -843,15 +997,20 @@
                         const telLimpo = EMPRESA_ATUAL.telefone ? EMPRESA_ATUAL.telefone.replace(/\D/g,'') : "";
                         const linkZap = `https://wa.me/55${telLimpo}?text=${encodeURIComponent(textoZap)}`;
 
+                        // E-mail (mesma mensagem da guia)
+                        const emailDest = EMPRESA_ATUAL.email || "";
+                        const assuntoEmail = `Guia de Parcelamento ${plano.tipo} - Parcela ${index+1}/${total}`;
+                        const corpoEmail = `Prezados,\n\nSegue guia referente ao Parcelamento: ${plano.tipo}${ident} - Parcela ${index+1}/${total} - Com vencimento: ${dataVis}.\n\nAtenciosamente,\nCONTEC Contabilidade e Assessoria`;
+                        const linkEmail = `mailto:${emailDest}?subject=${encodeURIComponent(assuntoEmail)}&body=${encodeURIComponent(corpoEmail)}`;
+
                         // Formata valor para exibição (com vírgula)
                         const valDisplay = parseFloat(p.valor).toLocaleString('pt-BR', {minimumFractionDigits: 2});
 
-                        // --- NOVO CÓDIGO DA CAIXINHA DE ENVIO ---
+                        // Caixinha de envio
                         const envioChecked = p.dataEnvio ? 'checked' : '';
                         const displayDataEnvio = p.dataEnvio 
                             ? `<span class="small text-primary fw-bold ms-1" style="font-size: 0.75rem;">${p.dataEnvio}</span>` 
                             : '<span class="small text-muted ms-1" style="font-size: 0.75rem; opacity: 0.5">Envio</span>';
-                        // ----------------------------------------
 
                         htmlParcelas += `
                             <li class="list-group-item d-flex justify-content-between align-items-center ${classeLinha}">
@@ -884,6 +1043,10 @@
                                     <a href="${linkZap}" target="_blank" class="btn btn-sm btn-whatsapp-solid rounded-circle" title="Enviar no WhatsApp">
                                         <i class="bi bi-whatsapp"></i>
                                     </a>
+
+                                    <a href="${linkEmail}" class="btn btn-sm btn-email-solid rounded-circle" title="Enviar por E-mail">
+                                        <i class="bi bi-envelope-fill"></i>
+                                    </a>
                                 </div>
                             </li>
                         `;
@@ -892,6 +1055,9 @@
                     const classeShow = ( `c-${planoId}` === idAberto ) ? "show" : "";
                     const badgeCor = qtdAtrasadas > 0 ? "bg-danger" : (progresso===100?'bg-success':'bg-secondary');
                     const textoBadge = qtdAtrasadas > 0 ? `${qtdAtrasadas} Atrasadas` : `${pagas}/${total}`;
+                    const btnLiquidar = progresso === 100
+                        ? `<button class="btn btn-sm btn-success px-3 me-2" onclick="abrirArquivar('${planoId}')"><i class="bi bi-check2-circle me-1"></i> Liquidar / Arquivar</button>`
+                        : `<button class="btn btn-sm btn-outline-secondary px-3 me-2" onclick="abrirArquivar('${planoId}')"><i class="bi bi-archive me-1"></i> Encerrar / Arquivar</button>`;
 
                     area.innerHTML += `
                         <div class="card mb-3 shadow-sm border-0">
@@ -915,8 +1081,9 @@
                                 </div>
                                 <ul class="list-group list-group-flush">${htmlParcelas}</ul>
                                 <div class="p-2 text-end bg-light">
+                                    ${btnLiquidar}
                                     <button class="btn btn-sm btn-delete-solid px-3" onclick="excluirPlano('${planoId}')">
-                                        <i class="bi bi-trash me-1"></i> Excluir Parcelamento
+                                        <i class="bi bi-trash me-1"></i> Excluir
                                     </button>
                                 </div>
                             </div>
@@ -927,16 +1094,79 @@
         }
 
         // ============================================
+        // 🗄️ ARQUIVO / HISTÓRICO (Liquidados / Desistências)
+        // ============================================
+
+        window.abrirArquivar = (planoId) => {
+            document.getElementById("arquivarPlanoId").value = planoId;
+            new bootstrap.Modal(document.getElementById('modalArquivar')).show();
+        };
+
+        window.confirmarArquivar = async (motivo) => {
+            const id = document.getElementById("arquivarPlanoId").value;
+            if(!id) return;
+            try {
+                await updateDoc(doc(db, "planos_parcelamento", id), {
+                    arquivado: true,
+                    statusArquivo: motivo,
+                    dataArquivamento: new Date().toISOString()
+                });
+                bootstrap.Modal.getInstance(document.getElementById('modalArquivar')).hide();
+            } catch(e) { alert("Erro ao arquivar: " + e.message); }
+        };
+
+        window.abrirArquivo = () => {
+            const div = document.getElementById("listaArquivo");
+            if(PLANOS_ARQUIVO_ATUAL.length === 0) {
+                div.innerHTML = '<div class="alert alert-light text-center border">Nenhum parcelamento arquivado.</div>';
+            } else {
+                div.innerHTML = "";
+                PLANOS_ARQUIVO_ATUAL.forEach(plano => {
+                    const total = plano.parcelas.length;
+                    const pagas = plano.parcelas.filter(p => p.paga).length;
+                    const dataArq = plano.dataArquivamento ? new Date(plano.dataArquivamento).toLocaleDateString('pt-BR') : "-";
+                    const badge = plano.statusArquivo === 'Liquidado'
+                        ? '<span class="badge badge-arquivo-liquidado">Liquidado</span>'
+                        : '<span class="badge badge-arquivo-desistencia">Desistência</span>';
+                    div.innerHTML += `
+                        <div class="card mb-2 border">
+                            <div class="card-body d-flex justify-content-between align-items-center flex-wrap gap-2">
+                                <div>
+                                    <div class="fw-bold" style="color: var(--contec-blue);">${plano.tipo} ${badge}</div>
+                                    <small class="text-muted d-block">${plano.numeroProcesso ? 'Proc: '+plano.numeroProcesso+' • ' : ''}${pagas}/${total} parcelas pagas</small>
+                                    <small class="text-muted">Arquivado em: ${dataArq}</small>
+                                </div>
+                                <button class="btn btn-sm btn-outline-primary" onclick="reativarPlano('${plano.id}')">
+                                    <i class="bi bi-arrow-counterclockwise me-1"></i> Reativar
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+            new bootstrap.Modal(document.getElementById('modalArquivo')).show();
+        };
+
+        window.reativarPlano = async (id) => {
+            try {
+                await updateDoc(doc(db, "planos_parcelamento", id), {
+                    arquivado: false,
+                    statusArquivo: null,
+                    dataArquivamento: null
+                });
+                bootstrap.Modal.getInstance(document.getElementById('modalArquivo')).hide();
+            } catch(e) { alert("Erro ao reativar: " + e.message); }
+        };
+
+        // ============================================
         // 🛠️ FUNÇÕES DE EDIÇÃO DE PARCELA
         // ============================================
 
         window.prepararEdicaoParcela = (planoId, index, valorAtual) => {
             document.getElementById("editPlanoId").value = planoId;
             document.getElementById("editIndex").value = index;
-            // Preenche o input já formatado
             const inputVal = document.getElementById("valorEditar");
             inputVal.value = parseFloat(valorAtual).toLocaleString('pt-BR', {minimumFractionDigits: 2});
-            // Aciona máscara manual para garantir formatação correta se precisar
             mascaraMoeda(inputVal);
             
             new bootstrap.Modal(document.getElementById('modalEditarParcela')).show();
@@ -947,18 +1177,15 @@
             const planoId = document.getElementById("editPlanoId").value;
             const index = parseInt(document.getElementById("editIndex").value);
             const novoValorStr = document.getElementById("valorEditar").value;
-            const novoValor = converterMoedaParaFloat(novoValorStr); // Converte "1.000,00" para 1000.00
+            const novoValor = converterMoedaParaFloat(novoValorStr);
 
             try {
                 const ref = doc(db, "planos_parcelamento", planoId);
                 const snap = await getDoc(ref);
                 if(snap.exists()) {
                     const dados = snap.data();
-                    // Atualiza apenas o valor daquela parcela
                     dados.parcelas[index].valor = novoValor;
-                    
                     await updateDoc(ref, { parcelas: dados.parcelas });
-                    
                     bootstrap.Modal.getInstance(document.getElementById('modalEditarParcela')).hide();
                 }
             } catch (err) {
@@ -978,7 +1205,6 @@
             const select = document.getElementById("tipoDivida");
             select.innerHTML = "";
             TIPOS_PARCELAMENTO.forEach(tipo => select.innerHTML += `<option value="${tipo}">${tipo}</option>`);
-            // Limpa campos
             document.getElementById("valorEntrada").value = "";
             document.getElementById("valorRestante").value = "";
             document.getElementById("dataInicio").value = "";
@@ -1002,7 +1228,7 @@
             }
         };
 
-        // --- NOVO: Função para salvar a data de envio ---
+        // Salvar a data de envio
         window.alternarEnvio = async (planoId, index, isChecked) => {
             const ref = doc(db, "planos_parcelamento", planoId);
             const snap = await getDoc(ref);
@@ -1011,28 +1237,24 @@
                 const dados = snap.data();
                 
                 if (isChecked) {
-                    // Pega a data de hoje formatada (DD/MM/AAAA)
                     const hoje = new Date();
                     const dia = String(hoje.getDate()).padStart(2, '0');
                     const mes = String(hoje.getMonth() + 1).padStart(2, '0');
                     const ano = hoje.getFullYear();
                     dados.parcelas[index].dataEnvio = `${dia}/${mes}/${ano}`;
                 } else {
-                    // Remove a data se desmarcar
                     delete dados.parcelas[index].dataEnvio;
                 }
                 
-                // Salva no Firebase
                 await updateDoc(ref, { parcelas: dados.parcelas });
             }
         };
 
-        // LÓGICA DE GERAÇÃO (ATUALIZADA PARA USAR MÁSCARA)
+        // LÓGICA DE GERAÇÃO
         document.getElementById("formLote").addEventListener("submit", async (e) => {
             e.preventDefault();
             
             const qtd = parseInt(document.getElementById("qtdParcelas").value);
-            // Converte strings "1.000,00" para float 1000.00
             const valEntrada = converterMoedaParaFloat(document.getElementById("valorEntrada").value);
             const valResto = converterMoedaParaFloat(document.getElementById("valorRestante").value);
             const inputData = document.getElementById("dataInicio").value;
@@ -1069,6 +1291,7 @@
                     tipo: document.getElementById("tipoDivida").value,
                     numeroProcesso: document.getElementById("numeroProcesso").value,
                     dataCriacao: new Date(),
+                    arquivado: false,
                     parcelas: lista
                 });
                 bootstrap.Modal.getInstance(document.getElementById('modalNovoParcelamento')).hide();
@@ -1085,7 +1308,7 @@
                 await updateDoc(ref, {parcelas: p.parcelas});
             }
         };
-        window.excluirPlano = async (id) => { if(confirm("Tem certeza que deseja apagar parcelamento?")) await deleteDoc(doc(db, "planos_parcelamento", id)); };
+        window.excluirPlano = async (id) => { if(confirm("Tem certeza que deseja apagar parcelamento? (Se foi quitado, prefira 'Liquidar / Arquivar' para manter o histórico)")) await deleteDoc(doc(db, "planos_parcelamento", id)); };
 
         // RELATÓRIO
         window.gerarRelatorio = (dadosString) => {
@@ -1112,10 +1335,78 @@
             const tel = EMPRESA_ATUAL.telefone ? EMPRESA_ATUAL.telefone.replace(/\D/g,'') : "";
             window.open(`https://wa.me/55${tel}?text=${encodeURIComponent(texto)}`, '_blank');
         };
+
+        window.enviarRelatorioEmail = () => {
+            const texto = document.getElementById("textoRelatorio").value;
+            const email = EMPRESA_ATUAL.email || "";
+            const assunto = `Relatório de Parcelamento - ${EMPRESA_ATUAL.nome}`;
+            window.location.href = `mailto:${email}?subject=${encodeURIComponent(assunto)}&body=${encodeURIComponent(texto)}`;
+        };
+
         window.copiarRelatorio = () => {
             document.getElementById("textoRelatorio").select();
             document.execCommand("copy");
             alert("Copiado!");
+        };
+
+        // ============================================
+        // 📊 EXPORTAÇÕES EXCEL
+        // ============================================
+
+        window.exportarEmpresasExcel = () => {
+            if (typeof XLSX === "undefined") { alert("Não foi possível carregar o gerador de Excel. Verifique a internet e tente de novo."); return; }
+            if (LISTA_EMPRESAS_CACHE.length === 0) { alert("Não há empresas para exportar."); return; }
+
+            const linhas = LISTA_EMPRESAS_CACHE.map(e => ({
+                "Empresa": e.nome,
+                "CNPJ": e.cnpj || "",
+                "WhatsApp": e.telefone || "",
+                "E-mail": e.email || "",
+                "Observação": e.observacao || ""
+            }));
+            const ws = XLSX.utils.json_to_sheet(linhas);
+            ws['!cols'] = [ {wch:36}, {wch:20}, {wch:16}, {wch:26}, {wch:40} ];
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Empresas");
+            XLSX.writeFile(wb, `empresas_contec_${new Date().toISOString().split('T')[0]}.xlsx`);
+        };
+
+        window.exportarParcelamentosEmpresaExcel = () => {
+            if (typeof XLSX === "undefined") { alert("Não foi possível carregar o gerador de Excel. Verifique a internet e tente de novo."); return; }
+            if (!EMPRESA_ATUAL) { alert("Abra uma empresa para exportar."); return; }
+            if (PLANOS_ATIVOS_ATUAL.length === 0) { alert("Esta empresa não tem parcelamentos ativos."); return; }
+
+            const linhas = [];
+            PLANOS_ATIVOS_ATUAL.forEach(plano => {
+                const parcelasOrd = [...plano.parcelas].sort((a,b) => new Date(a.vencimento) - new Date(b.vencimento));
+                parcelasOrd.forEach((p, i) => {
+                    const v = p.vencimento.split('-');
+                    linhas.push({
+                        "Tipo": plano.tipo,
+                        "Processo": plano.numeroProcesso || "",
+                        "Parcela": i + 1,
+                        "Vencimento": `${v[2]}/${v[1]}/${v[0]}`,
+                        "Valor (R$)": parseFloat(p.valor),
+                        "Paga": p.paga ? "SIM" : "NÃO",
+                        "Data Envio": p.dataEnvio || ""
+                    });
+                });
+            });
+
+            const cabecalho = [
+                [`PARCELAMENTOS ATIVOS - ${EMPRESA_ATUAL.nome}`],
+                [`CNPJ: ${EMPRESA_ATUAL.cnpj || "-"}`],
+                [`Gerado em: ${new Date().toLocaleDateString('pt-BR')}`],
+                []
+            ];
+            const ws = XLSX.utils.aoa_to_sheet(cabecalho);
+            XLSX.utils.sheet_add_json(ws, linhas, { origin: "A5" });
+            ws['!cols'] = [ {wch:18}, {wch:16}, {wch:9}, {wch:14}, {wch:14}, {wch:8}, {wch:14} ];
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Parcelamentos");
+
+            const nomeArq = EMPRESA_ATUAL.nome.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+            XLSX.writeFile(wb, `parcelamentos_${nomeArq}_${new Date().toISOString().split('T')[0]}.xlsx`);
         };
     </script>
 </body>
