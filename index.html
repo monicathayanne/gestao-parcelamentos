@@ -651,6 +651,18 @@
 
         const SENHA_MESTRA = "Contec1801@"; 
 
+        // Monta um link para abrir a janela de escrever e-mail do Outlook web (conta hotmail/outlook), já preenchida
+        function montarLinkOutlook(destino, assunto, corpo) {
+            return `https://outlook.live.com/mail/0/deeplink/compose?to=${encodeURIComponent(destino || "")}&subject=${encodeURIComponent(assunto)}&body=${encodeURIComponent(corpo)}`;
+        }
+        window.checarEmailEmpresa = () => {
+            if (!EMPRESA_ATUAL || !EMPRESA_ATUAL.email) {
+                alert("Esta empresa ainda não tem e-mail cadastrado.\nClique no lápis (Editar) e adicione o e-mail primeiro.");
+                return false;
+            }
+            return true;
+        };
+
         // ============================================
         // 1. LOGIN
         // ============================================
@@ -760,38 +772,36 @@
             });
         }
 
-        // Calcula, por empresa, se as guias da competência (mês) atual já foram enviadas
+        // Calcula, por empresa, se as guias da competência (mês) atual já foram enviadas.
+        // Faz uma consulta pequena POR empresa (em paralelo) para não estourar o limite de get() das regras.
         const colPlanos = collection(db, "planos_parcelamento");
 
         async function atualizarStatusEnvio() {
             if(!USER_ATUAL || LISTA_EMPRESAS_CACHE.length === 0) return;
-            const ids = LISTA_EMPRESAS_CACHE.map(e => e.id);
             const novoStatus = {};
-            ids.forEach(id => novoStatus[id] = 'cinza');
+            LISTA_EMPRESAS_CACHE.forEach(e => novoStatus[e.id] = 'cinza');
 
             const agora = new Date();
             const compAtual = `${agora.getFullYear()}-${String(agora.getMonth()+1).padStart(2,'0')}`;
 
             try {
-                for (let i = 0; i < ids.length; i += 30) {
-                    const lote = ids.slice(i, i + 30);
-                    const snap = await getDocs(query(colPlanos, where("empresaId", "in", lote)));
+                await Promise.all(LISTA_EMPRESAS_CACHE.map(async (emp) => {
+                    const snap = await getDocs(query(colPlanos, where("empresaId", "==", emp.id)));
                     snap.forEach(d => {
                         const p = d.data();
                         if (p.arquivado) return;
-                        const eid = p.empresaId;
                         (p.parcelas || []).forEach(par => {
                             if (!par.vencimento) return;
                             if (par.vencimento.slice(0,7) === compAtual) {
                                 if (!par.paga && !par.dataEnvio) {
-                                    novoStatus[eid] = 'vermelho';
-                                } else if (novoStatus[eid] !== 'vermelho') {
-                                    novoStatus[eid] = 'verde';
+                                    novoStatus[emp.id] = 'vermelho';
+                                } else if (novoStatus[emp.id] !== 'vermelho') {
+                                    novoStatus[emp.id] = 'verde';
                                 }
                             }
                         });
                     });
-                }
+                }));
                 STATUS_ENVIO = novoStatus;
                 renderizarEmpresas(LISTA_EMPRESAS_CACHE);
             } catch(e) {
@@ -997,11 +1007,10 @@
                         const telLimpo = EMPRESA_ATUAL.telefone ? EMPRESA_ATUAL.telefone.replace(/\D/g,'') : "";
                         const linkZap = `https://wa.me/55${telLimpo}?text=${encodeURIComponent(textoZap)}`;
 
-                        // E-mail (mesma mensagem da guia)
-                        const emailDest = EMPRESA_ATUAL.email || "";
+                        // E-mail via Outlook web (mesma mensagem da guia)
                         const assuntoEmail = `Guia de Parcelamento ${plano.tipo} - Parcela ${index+1}/${total}`;
                         const corpoEmail = `Prezados,\n\nSegue guia referente ao Parcelamento: ${plano.tipo}${ident} - Parcela ${index+1}/${total} - Com vencimento: ${dataVis}.\n\nAtenciosamente,\nCONTEC Contabilidade e Assessoria`;
-                        const linkEmail = `mailto:${emailDest}?subject=${encodeURIComponent(assuntoEmail)}&body=${encodeURIComponent(corpoEmail)}`;
+                        const linkEmail = montarLinkOutlook(EMPRESA_ATUAL.email, assuntoEmail, corpoEmail);
 
                         // Formata valor para exibição (com vírgula)
                         const valDisplay = parseFloat(p.valor).toLocaleString('pt-BR', {minimumFractionDigits: 2});
@@ -1044,7 +1053,7 @@
                                         <i class="bi bi-whatsapp"></i>
                                     </a>
 
-                                    <a href="${linkEmail}" class="btn btn-sm btn-email-solid rounded-circle" title="Enviar por E-mail">
+                                    <a href="${linkEmail}" target="_blank" onclick="return checarEmailEmpresa()" class="btn btn-sm btn-email-solid rounded-circle" title="Enviar por E-mail (Outlook)">
                                         <i class="bi bi-envelope-fill"></i>
                                     </a>
                                 </div>
@@ -1337,10 +1346,10 @@
         };
 
         window.enviarRelatorioEmail = () => {
+            if (!checarEmailEmpresa()) return;
             const texto = document.getElementById("textoRelatorio").value;
-            const email = EMPRESA_ATUAL.email || "";
             const assunto = `Relatório de Parcelamento - ${EMPRESA_ATUAL.nome}`;
-            window.location.href = `mailto:${email}?subject=${encodeURIComponent(assunto)}&body=${encodeURIComponent(texto)}`;
+            window.open(montarLinkOutlook(EMPRESA_ATUAL.email, assunto, texto), '_blank');
         };
 
         window.copiarRelatorio = () => {
