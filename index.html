@@ -290,7 +290,7 @@
                     <div class="d-flex gap-2 flex-wrap">
                         <div class="input-group shadow-sm" style="width: 230px;">
                             <span class="input-group-text bg-white border-end-0"><i class="bi bi-search"></i></span>
-                            <input type="search" id="inputBusca" name="filtro-empresa-contec" class="form-control border-start-0" placeholder="Buscar empresa..." onkeyup="filtrarEmpresas()" oninput="filtrarEmpresas()" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" aria-autocomplete="none" role="presentation" data-lpignore="true" data-form-type="other">
+                            <input type="search" id="inputBusca" name="filtro-empresa-contec" class="form-control border-start-0" placeholder="Buscar empresa..." onkeyup="filtrarEmpresas()" oninput="filtrarEmpresas()" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" aria-autocomplete="none" role="presentation" data-lpignore="true" data-form-type="other" readonly onfocus="this.removeAttribute('readonly')">
                         </div>
 
                         <button class="btn btn-outline-success shadow-sm fw-bold" type="button" onclick="exportarEmpresasExcel()">
@@ -299,6 +299,10 @@
 
                         <button class="btn btn-outline-primary shadow-sm fw-bold" type="button" onclick="abrirMigracao()">
                             <i class="bi bi-arrow-left-right me-1"></i>Migrar
+                        </button>
+
+                        <button class="btn btn-outline-secondary shadow-sm fw-bold" type="button" onclick="abrirEmpresasArquivadas()">
+                            <i class="bi bi-archive me-1"></i>Arquivadas <span class="badge bg-secondary ms-1" id="badgeEmpresasArquivadas">0</span>
                         </button>
 
                         <button class="btn btn-contec px-4 shadow-sm" type="button" onclick="prepararNovaEmpresa()">
@@ -342,6 +346,7 @@
                             </div>
                             <div class="btn-group">
                                 <button class="btn btn-outline-secondary btn-sm" onclick="editarEmpresaAtual()" title="Editar"><i class="bi bi-pencil"></i></button>
+                                <button id="btnArquivarEmpresa" class="btn btn-outline-secondary btn-sm" onclick="alternarArquivoEmpresaAtual()" title="Arquivar"><i class="bi bi-archive"></i></button>
                                 <button class="btn btn-outline-danger btn-sm" onclick="excluirEmpresaAtual()" title="Excluir"><i class="bi bi-trash"></i></button>
                             </div>
                         </div>
@@ -544,6 +549,22 @@
         </div>
     </div>
 
+    <!-- MODAL: Empresas Arquivadas -->
+    <div class="modal fade" id="modalEmpresasArquivadas" tabindex="-1">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold"><i class="bi bi-archive me-2"></i>Empresas Arquivadas</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="small text-muted">Empresas guardadas fora da lista principal. O histórico de parcelamentos continua salvo. Use "Ver" para consultar ou "Reativar" para trazer de volta.</p>
+                    <div id="listaEmpresasArquivadas"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- MODAL: Migração / Backup (JSON) -->
     <div class="modal fade" id="modalMigracao" tabindex="-1">
         <div class="modal-dialog modal-lg modal-dialog-scrollable">
@@ -697,6 +718,8 @@
         let STATUS_ENVIO = {};        // empresaId -> 'verde' | 'vermelho' | 'cinza'
         let PLANOS_ATIVOS_ATUAL = []; // planos ativos da empresa aberta
         let PLANOS_ARQUIVO_ATUAL = [];// planos arquivados da empresa aberta
+        let LISTA_EMPRESAS_ARQUIVADAS = []; // empresas arquivadas (fora da lista principal)
+        let SEM_PARCELAMENTO_ATIVO = {};    // empresaId -> true quando não há parcelamento ativo
 
         const SENHA_MESTRA = "Contec1801@"; 
 
@@ -844,22 +867,22 @@
             if(!USER_ATUAL) return;
             const q = query(colEmpresas, where("dono", "==", USER_ATUAL.uid), orderBy("nome"));
             
-            onSnapshot(q, (snapshot) => {
-                LISTA_EMPRESAS_CACHE = [];
-                snapshot.forEach(d => {
-                    LISTA_EMPRESAS_CACHE.push({ id: d.id, ...d.data() });
-                });
+            const processarEmpresas = (docs) => {
+                const todas = docs.map(d => ({ id: d.id, ...d.data() }));
+                LISTA_EMPRESAS_CACHE = todas.filter(e => !e.arquivada);
+                LISTA_EMPRESAS_ARQUIVADAS = todas.filter(e => e.arquivada);
+                atualizarBadgeArquivadas();
                 renderizarEmpresas(LISTA_EMPRESAS_CACHE);
                 atualizarStatusEnvio();
+            };
+            onSnapshot(q, (snapshot) => {
+                processarEmpresas(snapshot.docs);
             }, (error) => {
                 if(error.code === 'failed-precondition') {
                     const q2 = query(colEmpresas, where("dono", "==", USER_ATUAL.uid));
                     onSnapshot(q2, (snap) => {
-                        LISTA_EMPRESAS_CACHE = [];
-                        snap.forEach(d => LISTA_EMPRESAS_CACHE.push({ id: d.id, ...d.data() }));
-                        LISTA_EMPRESAS_CACHE.sort((a,b) => (a.nome||"").localeCompare(b.nome||""));
-                        renderizarEmpresas(LISTA_EMPRESAS_CACHE);
-                        atualizarStatusEnvio();
+                        const docs = [...snap.docs].sort((a,b) => ((a.data().nome)||"").localeCompare((b.data().nome)||""));
+                        processarEmpresas(docs);
                     });
                 }
             });
@@ -877,14 +900,16 @@
             try {
                 await Promise.all(LISTA_EMPRESAS_CACHE.map(async (emp) => {
                     const snap = await getDocs(query(colPlanos, where("empresaId", "==", emp.id)));
-                    let temPendente = false, temEnviado = false;
+                    let temPendente = false, temEnviado = false, temAtivo = false;
                     snap.forEach(d => {
                         const p = d.data();
                         if (p.arquivado) return;
+                        temAtivo = true;
                         const st = statusEnvioDoPlano(p); // só a parcela da competência atual conta
                         if (st === 'vermelho') temPendente = true;
                         else if (st === 'verde') temEnviado = true;
                     });
+                    SEM_PARCELAMENTO_ATIVO[emp.id] = !temAtivo;
                     novoStatus[emp.id] = temPendente ? 'vermelho' : (temEnviado ? 'verde' : 'cinza');
                 }));
                 STATUS_ENVIO = novoStatus;
@@ -906,6 +931,13 @@
                 const titulo = cor === 'vermelho' ? 'Envio pendente nesta competência'
                              : cor === 'verde'   ? 'Guias desta competência enviadas'
                              : 'Sem parcela nesta competência';
+                const semAtivo = SEM_PARCELAMENTO_ATIVO[emp.id] === true;
+                const btnArquivarInline = semAtivo
+                    ? `<button class="btn btn-sm btn-outline-secondary me-2" title="Sem parcelamento ativo — arquivar empresa" onclick="event.stopPropagation(); arquivarEmpresa('${emp.id}')"><i class="bi bi-archive"></i></button>`
+                    : '';
+                const selo = semAtivo
+                    ? '<span class="badge bg-light text-secondary border ms-2" style="font-weight:500;">sem parcelamento ativo</span>'
+                    : '';
                 div.innerHTML += `
                     <div class="col-12">
                         <div class="card card-empresa border-0 shadow-sm" onclick="abrirDetalhesEmpresa('${emp.id}')">
@@ -913,11 +945,14 @@
                                 <div class="d-flex align-items-center gap-3" style="min-width:0;">
                                     <span class="dot-status dot-${cor}" title="${titulo}"></span>
                                     <div style="min-width:0;">
-                                        <h6 class="fw-bold m-0 text-uppercase text-truncate" style="color: var(--contec-blue);">${emp.nome}</h6>
+                                        <h6 class="fw-bold m-0 text-uppercase text-truncate" style="color: var(--contec-blue);">${emp.nome}${selo}</h6>
                                         <small class="text-muted"><i class="bi bi-postcard"></i> ${emp.cnpj || '-'}</small>
                                     </div>
                                 </div>
-                                <i class="bi bi-chevron-right text-muted flex-shrink-0 ms-2"></i>
+                                <div class="d-flex align-items-center flex-shrink-0 ms-2">
+                                    ${btnArquivarInline}
+                                    <i class="bi bi-chevron-right text-muted"></i>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -985,6 +1020,20 @@
             document.getElementById("subtituloTel").innerText = EMPRESA_ATUAL.telefone || "N/A";
             document.getElementById("subtituloEmail").innerText = EMPRESA_ATUAL.email || "N/A";
             document.getElementById("textoObs").innerText = EMPRESA_ATUAL.observacao || "Nenhuma observação.";
+            const btnArq = document.getElementById("btnArquivarEmpresa");
+            if (btnArq) {
+                if (EMPRESA_ATUAL.arquivada) {
+                    btnArq.innerHTML = '<i class="bi bi-arrow-counterclockwise"></i>';
+                    btnArq.title = "Reativar empresa";
+                    btnArq.classList.add("btn-outline-primary");
+                    btnArq.classList.remove("btn-outline-secondary");
+                } else {
+                    btnArq.innerHTML = '<i class="bi bi-archive"></i>';
+                    btnArq.title = "Arquivar empresa";
+                    btnArq.classList.add("btn-outline-secondary");
+                    btnArq.classList.remove("btn-outline-primary");
+                }
+            }
         }
 
         window.irParaHome = () => {
@@ -1454,6 +1503,75 @@
             document.getElementById("textoRelatorio").select();
             document.execCommand("copy");
             alert("Copiado!");
+        };
+
+        // ============================================
+        // 🗄️ EMPRESAS ARQUIVADAS
+        // ============================================
+
+        function atualizarBadgeArquivadas() {
+            const b = document.getElementById("badgeEmpresasArquivadas");
+            if (b) b.innerText = LISTA_EMPRESAS_ARQUIVADAS.length;
+        }
+
+        window.arquivarEmpresa = async (id) => {
+            if (!confirm("Arquivar esta empresa? Ela sai da lista principal e vai para 'Empresas Arquivadas'. O histórico de parcelamentos fica guardado e você pode reativar quando quiser.")) return;
+            try {
+                await updateDoc(doc(db, "empresas", id), { arquivada: true, dataArquivamentoEmpresa: new Date().toISOString() });
+            } catch (e) { alert("Erro ao arquivar: " + e.message); }
+        };
+
+        window.reativarEmpresa = async (id) => {
+            try {
+                await updateDoc(doc(db, "empresas", id), { arquivada: false, dataArquivamentoEmpresa: null });
+                const modalEl = document.getElementById('modalEmpresasArquivadas');
+                const inst = bootstrap.Modal.getInstance(modalEl);
+                if (inst && modalEl.classList.contains('show')) inst.hide();
+            } catch (e) { alert("Erro ao reativar: " + e.message); }
+        };
+
+        window.alternarArquivoEmpresaAtual = async () => {
+            if (!EMPRESA_ATUAL) return;
+            if (EMPRESA_ATUAL.arquivada) {
+                await reativarEmpresa(EMPRESA_ATUAL.id);
+                window.irParaHome();
+            } else {
+                if (!confirm("Arquivar esta empresa? Ela sai da lista principal e vai para 'Empresas Arquivadas'. O histórico de parcelamentos fica guardado e você pode reativar quando quiser.")) return;
+                try {
+                    await updateDoc(doc(db, "empresas", EMPRESA_ATUAL.id), { arquivada: true, dataArquivamentoEmpresa: new Date().toISOString() });
+                    window.irParaHome();
+                } catch (e) { alert("Erro ao arquivar: " + e.message); }
+            }
+        };
+
+        window.abrirEmpresasArquivadas = () => {
+            const div = document.getElementById("listaEmpresasArquivadas");
+            if (LISTA_EMPRESAS_ARQUIVADAS.length === 0) {
+                div.innerHTML = '<div class="alert alert-light text-center border">Nenhuma empresa arquivada.</div>';
+            } else {
+                div.innerHTML = LISTA_EMPRESAS_ARQUIVADAS.map(e => `
+                    <div class="card mb-2 border">
+                        <div class="card-body d-flex justify-content-between align-items-center flex-wrap gap-2">
+                            <div>
+                                <div class="fw-bold" style="color: var(--contec-blue);">${e.nome}</div>
+                                <small class="text-muted d-block"><i class="bi bi-postcard"></i> ${e.cnpj || '-'}</small>
+                                ${e.dataArquivamentoEmpresa ? `<small class="text-muted">Arquivada em: ${new Date(e.dataArquivamentoEmpresa).toLocaleDateString('pt-BR')}</small>` : ''}
+                            </div>
+                            <div class="d-flex gap-2">
+                                <button class="btn btn-sm btn-outline-secondary" onclick="verEmpresaArquivada('${e.id}')"><i class="bi bi-eye me-1"></i>Ver</button>
+                                <button class="btn btn-sm btn-outline-primary" onclick="reativarEmpresa('${e.id}')"><i class="bi bi-arrow-counterclockwise me-1"></i>Reativar</button>
+                            </div>
+                        </div>
+                    </div>
+                `).join("");
+            }
+            new bootstrap.Modal(document.getElementById('modalEmpresasArquivadas')).show();
+        };
+
+        window.verEmpresaArquivada = (id) => {
+            const inst = bootstrap.Modal.getInstance(document.getElementById('modalEmpresasArquivadas'));
+            if (inst) inst.hide();
+            abrirDetalhesEmpresa(id);
         };
 
         // ============================================
