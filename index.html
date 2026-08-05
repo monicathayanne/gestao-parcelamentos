@@ -290,7 +290,7 @@
                     <div class="d-flex gap-2 flex-wrap">
                         <div class="input-group shadow-sm" style="width: 230px;">
                             <span class="input-group-text bg-white border-end-0"><i class="bi bi-search"></i></span>
-                            <input type="text" id="inputBusca" class="form-control border-start-0" placeholder="Buscar empresa..." onkeyup="filtrarEmpresas()">
+                            <input type="search" id="inputBusca" name="filtro-empresa-contec" class="form-control border-start-0" placeholder="Buscar empresa..." onkeyup="filtrarEmpresas()" oninput="filtrarEmpresas()" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" aria-autocomplete="none" role="presentation" data-lpignore="true" data-form-type="other">
                         </div>
 
                         <button class="btn btn-outline-success shadow-sm fw-bold" type="button" onclick="exportarEmpresasExcel()">
@@ -762,6 +762,11 @@
                 document.getElementById("userEmailDisplay").innerText = user.email;
                 carregarConfiguracoes();
                 iniciarEscutaEmpresas();
+                // Impede que o navegador deixe o e-mail salvo dentro da busca (autofill)
+                const limparBusca = () => { const ib = document.getElementById("inputBusca"); if (ib && ib.value) { ib.value = ""; } };
+                limparBusca();
+                setTimeout(limparBusca, 250);
+                setTimeout(limparBusca, 700);
             } else {
                 USER_ATUAL = null;
                 document.getElementById("telaLogin").classList.remove("d-none");
