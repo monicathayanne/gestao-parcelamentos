@@ -297,6 +297,10 @@
                             <i class="bi bi-file-earmark-excel me-1"></i>Exportar
                         </button>
 
+                        <button class="btn btn-outline-primary shadow-sm fw-bold" type="button" onclick="abrirMigracao()">
+                            <i class="bi bi-arrow-left-right me-1"></i>Migrar
+                        </button>
+
                         <button class="btn btn-contec px-4 shadow-sm" type="button" onclick="prepararNovaEmpresa()">
                             <i class="bi bi-plus-lg me-2"></i>Nova
                         </button>
@@ -359,6 +363,12 @@
                     <button class="btn btn-outline-success flex-grow-1 fw-bold" type="button" onclick="exportarParcelamentosEmpresaExcel()">
                         <i class="bi bi-file-earmark-excel me-1"></i> Exportar Excel
                     </button>
+                </div>
+
+                <div class="mb-2 d-flex gap-3 flex-wrap text-muted">
+                    <span class="legenda-dot"><span class="dot-status dot-vermelho"></span> Envio pendente</span>
+                    <span class="legenda-dot"><span class="dot-status dot-verde"></span> Enviado no mês</span>
+                    <span class="legenda-dot"><span class="dot-status dot-cinza"></span> Sem parcela no mês</span>
                 </div>
 
                 <div id="areaParcelamentos"></div>
@@ -534,6 +544,45 @@
         </div>
     </div>
 
+    <!-- MODAL: Migração / Backup (JSON) -->
+    <div class="modal fade" id="modalMigracao" tabindex="-1">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold"><i class="bi bi-arrow-left-right me-2"></i>Migração / Backup de Empresas</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-info small mb-3">
+                        <b>Como funciona:</b> marque as empresas que quer migrar e clique em <b>Baixar selecionadas</b>. Depois entre no sistema com o <b>outro usuário</b> e use <b>Importar arquivo</b> para recriar tudo lá (empresas + parcelamentos, ativos e arquivados). A exclusão no usuário atual é feita por você depois de conferir. Serve também como <b>backup</b> completo.
+                    </div>
+
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="chkTodasMigracao" onchange="marcarTodasMigracao(this.checked)">
+                            <label class="form-check-label fw-bold" for="chkTodasMigracao">Selecionar todas</label>
+                        </div>
+                        <span class="small text-muted" id="contadorMigracao">0 selecionada(s)</span>
+                    </div>
+
+                    <div id="listaMigracao" style="max-height: 300px; overflow-y:auto;" class="border rounded p-2 mb-3"></div>
+
+                    <div id="statusMigracao" class="small mb-3"></div>
+
+                    <div class="d-flex gap-2 flex-wrap">
+                        <button class="btn btn-contec fw-bold" onclick="gerarArquivoMigracao()">
+                            <i class="bi bi-download me-1"></i> Baixar selecionadas (.json)
+                        </button>
+                        <button class="btn btn-outline-primary fw-bold" onclick="document.getElementById('inputImportJson').click()">
+                            <i class="bi bi-upload me-1"></i> Importar arquivo (.json)
+                        </button>
+                    </div>
+                    <input type="file" id="inputImportJson" accept="application/json,.json" style="display:none">
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="modal fade" id="modalConfig" tabindex="-1">
         <div class="modal-dialog">
             <div class="modal-content">
@@ -663,6 +712,45 @@
             return true;
         };
 
+        // Último dia útil de um mês (guias do governo saem no fim do mês)
+        function ultimoDiaUtilDoMes(ano, mesIndex0) {
+            let d = new Date(ano, mesIndex0 + 1, 0); // último dia do mês
+            if (d.getDay() === 6) d.setDate(d.getDate() - 1);      // sábado -> sexta
+            else if (d.getDay() === 0) d.setDate(d.getDate() - 2); // domingo -> sexta
+            return d;
+        }
+        function formatarDataBR(dateObj) {
+            const dd = String(dateObj.getDate()).padStart(2,'0');
+            const mm = String(dateObj.getMonth()+1).padStart(2,'0');
+            return `${dd}/${mm}/${dateObj.getFullYear()}`;
+        }
+
+        // Competência atual e competência de um envio (base do status da bolinha)
+        function competenciaAtual() {
+            const a = new Date();
+            return `${a.getFullYear()}-${String(a.getMonth()+1).padStart(2,'0')}`;
+        }
+        function competenciaDoEnvio(dataEnvioStr) {
+            if (!dataEnvioStr) return null;
+            const partes = dataEnvioStr.split('/'); // dd/mm/aaaa
+            if (partes.length !== 3) return null;
+            return `${partes[2]}-${partes[1]}`;
+        }
+        // Status de envio do MÊS de um parcelamento: olha APENAS a parcela que vence na competência atual.
+        // 'vermelho' = a parcela deste mês ainda não foi enviada/paga | 'verde' = já foi enviada/paga | 'cinza' = não há parcela neste mês
+        function statusEnvioDoPlano(plano) {
+            const comp = competenciaAtual();
+            let pendente = false, enviado = false;
+            (plano.parcelas || []).forEach(par => {
+                if (!par.vencimento) return;
+                if (par.vencimento.slice(0,7) === comp) {
+                    if (par.paga || competenciaDoEnvio(par.dataEnvio) === comp) enviado = true;
+                    else pendente = true;
+                }
+            });
+            return pendente ? 'vermelho' : (enviado ? 'verde' : 'cinza');
+        }
+
         // ============================================
         // 1. LOGIN
         // ============================================
@@ -781,26 +869,18 @@
             const novoStatus = {};
             LISTA_EMPRESAS_CACHE.forEach(e => novoStatus[e.id] = 'cinza');
 
-            const agora = new Date();
-            const compAtual = `${agora.getFullYear()}-${String(agora.getMonth()+1).padStart(2,'0')}`;
-
             try {
                 await Promise.all(LISTA_EMPRESAS_CACHE.map(async (emp) => {
                     const snap = await getDocs(query(colPlanos, where("empresaId", "==", emp.id)));
+                    let temPendente = false, temEnviado = false;
                     snap.forEach(d => {
                         const p = d.data();
                         if (p.arquivado) return;
-                        (p.parcelas || []).forEach(par => {
-                            if (!par.vencimento) return;
-                            if (par.vencimento.slice(0,7) === compAtual) {
-                                if (!par.paga && !par.dataEnvio) {
-                                    novoStatus[emp.id] = 'vermelho';
-                                } else if (novoStatus[emp.id] !== 'vermelho') {
-                                    novoStatus[emp.id] = 'verde';
-                                }
-                            }
-                        });
+                        const st = statusEnvioDoPlano(p); // só a parcela da competência atual conta
+                        if (st === 'vermelho') temPendente = true;
+                        else if (st === 'verde') temEnviado = true;
                     });
+                    novoStatus[emp.id] = temPendente ? 'vermelho' : (temEnviado ? 'verde' : 'cinza');
                 }));
                 STATUS_ENVIO = novoStatus;
                 renderizarEmpresas(LISTA_EMPRESAS_CACHE);
@@ -957,6 +1037,9 @@
                 const hoje = new Date();
                 hoje.setHours(0,0,0,0);
 
+                // Vencimento para guias atrasadas reemitidas: último dia útil do mês corrente
+                const vencAtualBR = formatarDataBR(ultimoDiaUtilDoMes(hoje.getFullYear(), hoje.getMonth()));
+
                 PLANOS_ATIVOS_ATUAL.forEach(plano => {
                     const planoId = plano.id;
                     const pagas = plano.parcelas.filter(p => p.paga).length;
@@ -1003,13 +1086,19 @@
                         }
 
                         const ident = plano.numeroProcesso ? ` - Nº: ${plano.numeroProcesso}` : "";
-                        const textoZap = `Segue guia referente ao Parcelamento: *${plano.tipo}*${ident} - Parcela ${index+1}/${total} - *Com vencimento:* ${dataVis}`;
                         const telLimpo = EMPRESA_ATUAL.telefone ? EMPRESA_ATUAL.telefone.replace(/\D/g,'') : "";
-                        const linkZap = `https://wa.me/55${telLimpo}?text=${encodeURIComponent(textoZap)}`;
-
-                        // E-mail via Outlook web (mesma mensagem da guia)
                         const assuntoEmail = `Guia de Parcelamento ${plano.tipo} - Parcela ${index+1}/${total}`;
-                        const corpoEmail = `Prezados,\n\nSegue guia referente ao Parcelamento: ${plano.tipo}${ident} - Parcela ${index+1}/${total} - Com vencimento: ${dataVis}.\n\nAtenciosamente,\nCONTEC Contabilidade e Assessoria`;
+
+                        // Se a parcela venceu e não foi paga, a guia é reemitida com vencimento no fim do mês atual
+                        let textoZap, corpoEmail;
+                        if (isAtrasado) {
+                            textoZap = `Segue guia referente ao Parcelamento: *${plano.tipo}*${ident} - Parcela ${index+1}/${total}.\n\n⚠️ Esta parcela venceu em ${dataVis}. Segue a guia *reemitida e atualizada*, com novo vencimento em *${vencAtualBR}*.`;
+                            corpoEmail = `Prezados,\n\nSegue guia referente ao Parcelamento: ${plano.tipo}${ident} - Parcela ${index+1}/${total}.\n\nEsta parcela venceu em ${dataVis}. Segue a guia reemitida e atualizada, com novo vencimento em ${vencAtualBR}.\n\nAtenciosamente,\nCONTEC Contabilidade e Assessoria`;
+                        } else {
+                            textoZap = `Segue guia referente ao Parcelamento: *${plano.tipo}*${ident} - Parcela ${index+1}/${total} - *Com vencimento:* ${dataVis}`;
+                            corpoEmail = `Prezados,\n\nSegue guia referente ao Parcelamento: ${plano.tipo}${ident} - Parcela ${index+1}/${total} - Com vencimento: ${dataVis}.\n\nAtenciosamente,\nCONTEC Contabilidade e Assessoria`;
+                        }
+                        const linkZap = `https://wa.me/55${telLimpo}?text=${encodeURIComponent(textoZap)}`;
                         const linkEmail = montarLinkOutlook(EMPRESA_ATUAL.email, assuntoEmail, corpoEmail);
 
                         // Formata valor para exibição (com vírgula)
@@ -1062,6 +1151,10 @@
                     });
 
                     const classeShow = ( `c-${planoId}` === idAberto ) ? "show" : "";
+                    const corPlano = statusEnvioDoPlano(plano);
+                    const tituloPlano = corPlano === 'vermelho' ? 'Guia deste mês ainda não enviada'
+                                      : corPlano === 'verde'   ? 'Guia deste mês já enviada'
+                                      : 'Sem parcela neste mês';
                     const badgeCor = qtdAtrasadas > 0 ? "bg-danger" : (progresso===100?'bg-success':'bg-secondary');
                     const textoBadge = qtdAtrasadas > 0 ? `${qtdAtrasadas} Atrasadas` : `${pagas}/${total}`;
                     const btnLiquidar = progresso === 100
@@ -1073,7 +1166,7 @@
                             <div class="card-header bg-white py-3 header-clicavel" data-bs-toggle="collapse" data-bs-target="#c-${planoId}">
                                 <div class="d-flex justify-content-between align-items-center">
                                     <div>
-                                        <h6 class="mb-0 fw-bold" style="color: var(--contec-blue);"><i class="bi bi-chevron-down small me-2"></i>${plano.tipo}</h6>
+                                        <h6 class="mb-0 fw-bold d-flex align-items-center gap-2" style="color: var(--contec-blue);"><i class="bi bi-chevron-down small"></i><span class="dot-status dot-${corPlano}" title="${tituloPlano}"></span>${plano.tipo}</h6>
                                         ${plano.numeroProcesso ? '<small class="text-muted" style="font-size:0.8rem">Proc: '+plano.numeroProcesso+'</small>' : ''}
                                     </div>
                                     <span class="badge rounded-pill ${badgeCor}">${textoBadge}</span>
@@ -1357,6 +1450,162 @@
             document.execCommand("copy");
             alert("Copiado!");
         };
+
+        // ============================================
+        // 🔄 MIGRAÇÃO / BACKUP (JSON)
+        // ============================================
+
+        window.abrirMigracao = () => {
+            const div = document.getElementById("listaMigracao");
+            document.getElementById("statusMigracao").innerHTML = "";
+            document.getElementById("chkTodasMigracao").checked = false;
+            if (LISTA_EMPRESAS_CACHE.length === 0) {
+                div.innerHTML = '<div class="text-muted text-center p-3">Nenhuma empresa cadastrada.</div>';
+            } else {
+                div.innerHTML = LISTA_EMPRESAS_CACHE.map(e => `
+                    <div class="form-check">
+                        <input class="form-check-input chk-migracao" type="checkbox" value="${e.id}" id="mig-${e.id}" onchange="atualizarContadorMigracao()">
+                        <label class="form-check-label" for="mig-${e.id}">
+                            <span class="fw-bold">${e.nome}</span> <small class="text-muted">${e.cnpj || ''}</small>
+                        </label>
+                    </div>
+                `).join("");
+            }
+            atualizarContadorMigracao();
+            new bootstrap.Modal(document.getElementById('modalMigracao')).show();
+        };
+
+        window.marcarTodasMigracao = (marcar) => {
+            document.querySelectorAll('.chk-migracao').forEach(c => c.checked = marcar);
+            atualizarContadorMigracao();
+        };
+
+        window.atualizarContadorMigracao = () => {
+            const n = document.querySelectorAll('.chk-migracao:checked').length;
+            document.getElementById("contadorMigracao").innerText = `${n} selecionada(s)`;
+        };
+
+        window.gerarArquivoMigracao = async () => {
+            const ids = Array.from(document.querySelectorAll('.chk-migracao:checked')).map(c => c.value);
+            if (ids.length === 0) { alert("Marque ao menos uma empresa."); return; }
+            const status = document.getElementById("statusMigracao");
+            status.innerHTML = '<span class="text-primary">Preparando arquivo, aguarde...</span>';
+            try {
+                const empresasOut = [];
+                for (const emp of LISTA_EMPRESAS_CACHE.filter(e => ids.includes(e.id))) {
+                    const snap = await getDocs(query(colPlanos, where("empresaId", "==", emp.id)));
+                    const parcelamentos = [];
+                    snap.forEach(d => {
+                        const p = d.data();
+                        parcelamentos.push({
+                            tipo: p.tipo || "",
+                            numeroProcesso: p.numeroProcesso || "",
+                            arquivado: !!p.arquivado,
+                            statusArquivo: p.statusArquivo || null,
+                            dataArquivamento: p.dataArquivamento || null,
+                            parcelas: (p.parcelas || []).map(x => ({
+                                numero: x.numero,
+                                valor: x.valor,
+                                vencimento: x.vencimento,
+                                paga: !!x.paga,
+                                ...(x.dataEnvio ? { dataEnvio: x.dataEnvio } : {})
+                            }))
+                        });
+                    });
+                    empresasOut.push({
+                        nome: emp.nome || "",
+                        cnpj: emp.cnpj || "",
+                        telefone: emp.telefone || "",
+                        email: emp.email || "",
+                        observacao: emp.observacao || "",
+                        parcelamentos
+                    });
+                }
+                const pacote = {
+                    tipo: "contec-parcelamentos-migracao",
+                    versao: 1,
+                    exportadoEm: new Date().toISOString(),
+                    origem: USER_ATUAL ? USER_ATUAL.email : "",
+                    empresas: empresasOut
+                };
+                const blob = new Blob([JSON.stringify(pacote, null, 2)], { type: "application/json" });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = `migracao_contec_${new Date().toISOString().split('T')[0]}.json`;
+                a.click();
+                URL.revokeObjectURL(url);
+                const nPlanos = empresasOut.reduce((t,e)=>t+e.parcelamentos.length,0);
+                status.innerHTML = `<span class="text-success">✅ Arquivo gerado: ${empresasOut.length} empresa(s) e ${nPlanos} parcelamento(s). Agora entre no OUTRO usuário e clique em "Importar arquivo".</span>`;
+            } catch (e) {
+                status.innerHTML = `<span class="text-danger">Erro ao gerar: ${e.message}</span>`;
+            }
+        };
+
+        document.getElementById("inputImportJson").addEventListener("change", async (ev) => {
+            const file = ev.target.files[0];
+            ev.target.value = ""; // permite reimportar o mesmo arquivo depois
+            if (!file) return;
+            const status = document.getElementById("statusMigracao");
+            let pacote;
+            try {
+                pacote = JSON.parse(await file.text());
+            } catch (e) {
+                status.innerHTML = '<span class="text-danger">Arquivo inválido (não é um JSON válido).</span>';
+                return;
+            }
+            if (!pacote || !Array.isArray(pacote.empresas)) {
+                status.innerHTML = '<span class="text-danger">Este arquivo não parece ser um backup de migração da Contec.</span>';
+                return;
+            }
+            const total = pacote.empresas.length;
+            if (!confirm(`Importar ${total} empresa(s) para o usuário ${USER_ATUAL.email}?\n\nEmpresas com o mesmo CNPJ que já existirem aqui serão ignoradas (para não duplicar).`)) return;
+
+            status.innerHTML = '<span class="text-primary">Importando, aguarde... (não feche a janela)</span>';
+            const cnpjsExistentes = new Set(LISTA_EMPRESAS_CACHE.map(e => (e.cnpj || "").trim()).filter(Boolean));
+            let importadas = 0, ignoradas = 0, planosImportados = 0;
+
+            try {
+                for (const emp of pacote.empresas) {
+                    const cnpj = (emp.cnpj || "").trim();
+                    if (cnpj && cnpjsExistentes.has(cnpj)) { ignoradas++; continue; }
+
+                    const refEmp = await addDoc(colEmpresas, {
+                        dono: USER_ATUAL.uid,
+                        nome: (emp.nome || "").toUpperCase(),
+                        cnpj: emp.cnpj || "",
+                        telefone: emp.telefone || "",
+                        email: emp.email || "",
+                        observacao: emp.observacao || ""
+                    });
+                    importadas++;
+                    if (cnpj) cnpjsExistentes.add(cnpj);
+
+                    for (const pl of (emp.parcelamentos || [])) {
+                        await addDoc(colPlanos, {
+                            empresaId: refEmp.id,
+                            tipo: pl.tipo || "",
+                            numeroProcesso: pl.numeroProcesso || "",
+                            arquivado: !!pl.arquivado,
+                            statusArquivo: pl.statusArquivo || null,
+                            dataArquivamento: pl.dataArquivamento || null,
+                            dataCriacao: new Date(),
+                            parcelas: (pl.parcelas || []).map(x => ({
+                                numero: x.numero,
+                                valor: x.valor,
+                                vencimento: x.vencimento,
+                                paga: !!x.paga,
+                                ...(x.dataEnvio ? { dataEnvio: x.dataEnvio } : {})
+                            }))
+                        });
+                        planosImportados++;
+                    }
+                }
+                status.innerHTML = `<span class="text-success">✅ Concluído! ${importadas} empresa(s) e ${planosImportados} parcelamento(s) importados.${ignoradas ? ` ${ignoradas} ignorada(s) por já existirem (mesmo CNPJ).` : ''}</span>`;
+            } catch (e) {
+                status.innerHTML = `<span class="text-danger">Erro na importação: ${e.message}. O que já entrou foi salvo.</span>`;
+            }
+        });
 
         // ============================================
         // 📊 EXPORTAÇÕES EXCEL
